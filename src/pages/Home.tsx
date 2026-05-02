@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import type { ReactNode } from "react";
 import { useBle } from "../ble/useBle";
 import { getAdventures } from "../adventures";
-import { PRODUCTS } from "../store/products";
+import { PRODUCTS, startingPrice } from "../store/products";
 import { ProductGlyph } from "../components/ProductGlyph";
 import type { DeviceType } from "../ble/protocol";
 import type { Adventure } from "../adventures/types";
@@ -166,7 +166,7 @@ function WorkshopRail() {
         {PRODUCTS.map((product) => (
           <Link
             key={product.id}
-            to="/store"
+            to={`/store/${product.id}`}
             className="card p-4 sm:p-5 block hover:-translate-y-0.5 transition-transform focus:outline-none focus:ring-2 focus:ring-relic-glow"
           >
             <ProductGlyph relic={product.relic} />
@@ -175,18 +175,14 @@ function WorkshopRail() {
                 {product.name}
               </h3>
               <span className="text-sm text-relic-parchment/80">
-                {product.price}
+                {startingPrice(product)}
               </span>
             </div>
             <p className="text-xs text-relic-parchment/60 italic mt-1">
               {product.tagline}
             </p>
             <p className="text-[10px] uppercase tracking-wider text-relic-parchment/40 mt-2">
-              {product.status === "available"
-                ? "In stock"
-                : product.status === "preorder"
-                  ? "Pre-order"
-                  : "Coming soon"}
+              Kit & DIY also available
             </p>
           </Link>
         ))}
