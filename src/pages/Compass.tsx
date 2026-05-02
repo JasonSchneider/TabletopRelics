@@ -36,14 +36,7 @@ export function Compass() {
 
   const bearingDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const activeMode = compassState?.mode ?? topMode;
-  const isManual   = topMode === "manual";
-
-  // The firmware mode string for the current selection
-  function firmwareMode(): string {
-    if (topMode !== "manual") return topMode;
-    return effect === "static" ? "manual" : effect;
-  }
+  const isManual = topMode === "manual";
 
   function switchTopMode(m: TopMode) {
     setTopMode(m);
