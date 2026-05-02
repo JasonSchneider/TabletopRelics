@@ -7,6 +7,7 @@ import { FairyStones } from "./pages/FairyStones";
 import { Adventures } from "./pages/Adventures";
 import { Adventure } from "./pages/Adventure";
 import { Store } from "./pages/Store";
+import { ProductPage } from "./pages/Product";
 import { NotFound } from "./pages/NotFound";
 
 export default function App() {
@@ -20,6 +21,7 @@ export default function App() {
         <Route path="/adventures" element={<Adventures />} />
         <Route path="/adventures/:id" element={<Adventure />} />
         <Route path="/store" element={<Store />} />
+        <Route path="/store/:productId" element={<ProductPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </AppShell>

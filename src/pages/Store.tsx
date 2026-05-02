@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { PRODUCTS, type Product } from "../store/products";
+import { PRODUCTS, startingPrice, isPaidTier } from "../store/products";
+import type { Product } from "../store/products";
 import { ProductGlyph } from "../components/ProductGlyph";
 
 export function Store() {
@@ -12,16 +12,15 @@ export function Store() {
         </p>
         <h1 className="text-3xl sm:text-4xl">Store</h1>
         <p className="text-relic-parchment/70 text-sm sm:text-base max-w-2xl">
-          Hand-finished props built to play with. Each relic ships with the
-          Tabletop Relics app, USB-C charging, and a year of firmware updates.
+          Hand-finished props built to play with. Each relic is available
+          ready-to-play, as a build-it-yourself kit, or as free open plans.
           Pre-orders ship in batches; reserve your spot below.
         </p>
       </header>
 
       <p className="text-xs text-relic-parchment/40 italic">
         Pricing and availability are placeholder while the workshop is being
-        set up. Subscribers below will be notified when each relic opens for
-        order.
+        set up. Subscribers will be notified when each relic opens for order.
       </p>
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -46,30 +45,35 @@ export function Store() {
 }
 
 function ProductCard({ product }: { product: Product }) {
-  const [notified, setNotified] = useState(false);
-  const [email, setEmail] = useState("");
-
-  function handleNotify(e: FormEvent) {
-    e.preventDefault();
-    // TODO: wire up to real backend (Resend, Buttondown, custom function).
-    // For now we just acknowledge and keep the form local.
-    if (email.trim()) {
-      setNotified(true);
-    }
-  }
-
   const accentRing = {
-    rune: "hover:ring-relic-rune/40",
+    rune:  "hover:ring-relic-rune/40",
     ember: "hover:ring-relic-ember/40",
-    glow: "hover:ring-relic-glow/40",
+    glow:  "hover:ring-relic-glow/40",
   }[product.accent];
 
-  const ctaClass =
-    product.status === "available" ? "btn-primary" : "btn-ghost";
+  const accentText = {
+    rune:  "text-relic-rune",
+    ember: "text-relic-ember",
+    glow:  "text-relic-glow",
+  }[product.accent];
+
+  // Build compact tier summary: "Finished $149 · Kit $89 · Plans Free"
+  const tierSummary = product.tiers
+    .map((t) =>
+      isPaidTier(t)
+        ? `${t.kind === "finished" ? "Finished" : "Kit"} ${t.price}`
+        : "Plans Free"
+    )
+    .join(" · ");
+
+  // Representative status from the finished tier
+  const finishedTier = product.tiers[0];
+  const status = finishedTier.status;
 
   return (
-    <article
-      className={`card p-5 sm:p-6 flex flex-col gap-4 ring-1 ring-transparent transition ${accentRing}`}
+    <Link
+      to={`/store/${product.id}`}
+      className={`card p-5 sm:p-6 flex flex-col gap-4 ring-1 ring-transparent transition ${accentRing} focus:outline-none focus:ring-2 focus:ring-relic-glow`}
     >
       <ProductGlyph relic={product.relic} />
 
@@ -78,79 +82,45 @@ function ProductCard({ product }: { product: Product }) {
           <h3 className="font-display text-xl text-relic-parchment">
             {product.name}
           </h3>
-          <StatusBadge status={product.status} />
+          <StatusBadge status={status} />
         </div>
         <p className="text-sm text-relic-parchment/70 italic">
           {product.tagline}
         </p>
       </div>
 
-      <p className="text-sm text-relic-parchment/80">{product.description}</p>
+      <p className="text-sm text-relic-parchment/80 flex-1">
+        {product.description}
+      </p>
 
-      <ul className="text-xs text-relic-parchment/60 space-y-1 list-disc pl-4 marker:text-relic-rune/60">
-        {product.features.map((f) => (
-          <li key={f}>{f}</li>
-        ))}
-      </ul>
-
-      <div className="flex items-baseline justify-between pt-2 border-t border-white/5">
-        <span className="text-2xl font-display text-relic-parchment">
-          {product.price}
-        </span>
-        <span className="text-[10px] uppercase tracking-wider text-relic-parchment/40">
-          USD
-        </span>
+      <div className="border-t border-white/5 pt-3 space-y-2">
+        <p className="text-xs text-relic-parchment/50">{tierSummary}</p>
+        <div className="flex items-baseline justify-between">
+          <span className="text-2xl font-display text-relic-parchment">
+            {startingPrice(product)}
+          </span>
+          <span className={`text-xs ${accentText}`}>
+            View versions →
+          </span>
+        </div>
       </div>
-
-      {product.status === "available" ? (
-        <button className={ctaClass} disabled>
-          Add to cart (checkout coming soon)
-        </button>
-      ) : notified ? (
-        <p className="text-sm text-emerald-300/80 text-center py-2">
-          Got it — we'll email you when this opens.
-        </p>
-      ) : (
-        <form onSubmit={handleNotify} className="space-y-2">
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            className="w-full bg-white/5 border border-white/10 rounded-md px-3 py-2 text-sm text-relic-parchment placeholder:text-relic-parchment/30 focus:outline-none focus:border-relic-glow/60"
-          />
-          <button type="submit" className="btn-primary w-full text-sm">
-            {product.status === "preorder" ? "Reserve a pre-order" : "Notify me"}
-          </button>
-        </form>
-      )}
-
-      <Link
-        to={`/${product.relic === "fairy-stones" ? "fairy-stones" : product.relic}`}
-        className="text-xs text-relic-parchment/50 hover:text-relic-parchment text-center"
-      >
-        See it in the app →
-      </Link>
-    </article>
+    </Link>
   );
 }
 
-function StatusBadge({ status }: { status: Product["status"] }) {
+function StatusBadge({ status }: { status: "available" | "preorder" | "soon" }) {
   const styles = {
     available: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
-    preorder: "bg-relic-glow/15 text-relic-glow border-relic-glow/30",
-    soon: "bg-white/5 text-relic-parchment/60 border-white/10",
+    preorder:  "bg-relic-glow/15 text-relic-glow border-relic-glow/30",
+    soon:      "bg-white/5 text-relic-parchment/60 border-white/10",
   }[status];
   const label = {
     available: "In stock",
-    preorder: "Pre-order",
-    soon: "Coming soon",
+    preorder:  "Pre-order",
+    soon:      "Coming soon",
   }[status];
   return (
-    <span
-      className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border whitespace-nowrap ${styles}`}
-    >
+    <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border whitespace-nowrap ${styles}`}>
       {label}
     </span>
   );
