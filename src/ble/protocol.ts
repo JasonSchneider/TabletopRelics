@@ -49,8 +49,9 @@ export type RelicCommand =
 
   // Compass
   | { op: "compass.setTarget"; bearing: number /* 0–359 degrees */ }
+  | { op: "compass.setColor"; r: number; g: number; b: number }
   | { op: "compass.calibrate" }
-  | { op: "compass.setMode"; mode: "ambient" | "quest" | "off" }
+  | { op: "compass.setMode"; mode: "ambient" | "quest" | "manual" | "off" }
 
   // Lantern
   | { op: "lantern.setFlame"; intensity: number /* 0–100 */ }
@@ -64,7 +65,7 @@ export type RelicCommand =
 
 /** State pushed from the prop via CHAR_STATE_UUID notifications. */
 export type RelicState =
-  | { type: "compass"; mode: "ambient" | "quest" | "off"; heading: number; target: number; calibrated: boolean }
+  | { type: "compass"; mode: "ambient" | "quest" | "manual" | "off"; heading: number; target: number; calibrated: boolean }
   | { type: "lantern"; intensity: number; color: { r: number; g: number; b: number }; effect: string | null }
   | { type: "fairy-stones"; pattern: string; color: { r: number; g: number; b: number }; connectedStones: string[] };
 
