@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-relic-ink text-relic-parchment font-body antialiased;
+    background-image:
+      radial-gradient(
+        ellipse at top,
+        rgba(45, 27, 78, 0.6) 0%,
+        transparent 60%
+      ),
+      radial-gradient(
+        ellipse at bottom,
+        rgba(167, 139, 250, 0.15) 0%,
+        transparent 50%
+      );
+    background-attachment: fixed;
+    /* Account for iOS notch / Android gesture bar when running as a PWA. */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right)
+      env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display tracking-wide;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2
+      font-medium transition-all duration-150 focus:outline-none focus:ring-2
+      focus:ring-relic-glow focus:ring-offset-2 focus:ring-offset-relic-ink
+      disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply btn bg-relic-glow text-relic-ink hover:bg-relic-glow/90
+      active:scale-[0.98] shadow-glow;
+  }
+
+  .btn-ghost {
+    @apply btn bg-white/5 text-relic-parchment hover:bg-white/10
+      border border-white/10;
+  }
+
+  .card {
+    @apply rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm
+      shadow-2xl;
+  }
+}
