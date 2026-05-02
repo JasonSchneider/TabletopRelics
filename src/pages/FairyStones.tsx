@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useBle } from "../ble/useBle";
+import { RelicAdventures } from "../components/RelicAdventures";
 
 const PATTERNS = ["breathe", "twinkle", "chase", "off"] as const;
 type Pattern = (typeof PATTERNS)[number];
@@ -100,6 +101,8 @@ export function FairyStones() {
           </p>
         </div>
       </div>
+
+      <RelicAdventures relic="fairy-stones" />
     </div>
   );
 }

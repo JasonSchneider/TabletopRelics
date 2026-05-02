@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useBle } from "../ble/useBle";
+import { RelicAdventures } from "../components/RelicAdventures";
 
 export function Compass() {
   const { status, send, state } = useBle();
@@ -90,6 +91,8 @@ export function Compass() {
           )}
         </div>
       </div>
+
+      <RelicAdventures relic="compass" />
     </div>
   );
 }
