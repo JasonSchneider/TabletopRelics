@@ -17,25 +17,25 @@ function ProductDetail({ product }: { product: Product }) {
   const [selectedTier, setSelectedTier] = useState<ProductTier>(product.tiers[0]);
 
   const accentText = {
-    rune: "text-relic-rune",
+    rune:  "text-relic-rune",
     ember: "text-relic-ember",
-    glow: "text-relic-glow",
+    glow:  "text-relic-glow",
   }[product.accent];
 
   const accentBorder = {
-    rune: "border-relic-rune",
+    rune:  "border-relic-rune",
     ember: "border-relic-ember",
-    glow: "border-relic-glow",
+    glow:  "border-relic-glow",
   }[product.accent];
 
-  const accentRing = {
-    rune: "ring-relic-rune",
-    ember: "ring-relic-ember",
-    glow: "ring-relic-glow",
+  const accentBg = {
+    rune:  "bg-relic-rune",
+    ember: "bg-relic-ember",
+    glow:  "bg-relic-glow",
   }[product.accent];
 
   return (
-    <div className="space-y-10 sm:space-y-12">
+    <div className="space-y-4 sm:space-y-6">
       {/* Breadcrumb */}
       <nav className="text-xs text-relic-parchment/40 flex items-center gap-1.5">
         <Link to="/store" className="hover:text-relic-parchment transition-colors">
@@ -45,131 +45,138 @@ function ProductDetail({ product }: { product: Product }) {
         <span className="text-relic-parchment/70">{product.name}</span>
       </nav>
 
-      {/* Hero */}
-      <section className="flex flex-col sm:flex-row gap-8 sm:gap-12 items-start">
-        <div className="w-full sm:w-48 shrink-0 flex justify-center">
-          <div className="w-36 h-36 sm:w-48 sm:h-48">
+      {/*
+        Two-column on desktop: product identity left, tier selector right.
+        Single column on mobile with a compact inline hero.
+      */}
+      <div className="sm:grid sm:grid-cols-[2fr_3fr] sm:gap-10 sm:items-start">
+
+        {/* ── Left col: product identity ── */}
+        <div className="space-y-4">
+          {/* Mobile: small inline header (glyph + name side by side) */}
+          <div className="flex items-center gap-4 sm:block">
+            <div className="w-14 h-14 shrink-0 sm:hidden">
+              <ProductGlyph relic={product.relic} />
+            </div>
+            <div>
+              <p className={`font-display text-[10px] tracking-widest uppercase ${accentText}`}>
+                Tabletop Relics
+              </p>
+              <h1 className="text-2xl sm:text-3xl text-relic-parchment leading-tight">
+                {product.name}
+              </h1>
+              <p className="text-sm text-relic-parchment/60 italic mt-0.5">
+                {product.tagline}
+              </p>
+            </div>
+          </div>
+
+          {/* Desktop-only large glyph */}
+          <div className="hidden sm:block w-full aspect-square max-w-[180px]">
             <ProductGlyph relic={product.relic} />
           </div>
-        </div>
-        <div className="space-y-3 flex-1">
-          <p className={`font-display text-xs tracking-widest uppercase ${accentText}`}>
-            Tabletop Relics
-          </p>
-          <h1 className="text-3xl sm:text-4xl text-relic-parchment">
-            {product.name}
-          </h1>
-          <p className="text-relic-parchment/70 text-base italic">
-            {product.tagline}
-          </p>
-          <p className="text-sm text-relic-parchment/80 max-w-xl leading-relaxed">
+
+          <p className="text-sm text-relic-parchment/75 leading-relaxed">
             {product.description}
           </p>
-          <ul className="text-xs text-relic-parchment/60 space-y-1 pt-1 list-disc pl-4 marker:text-relic-rune/50">
+
+          <ul className="text-xs text-relic-parchment/55 space-y-1 list-disc pl-4 marker:text-relic-rune/40">
             {product.features.map((f) => (
               <li key={f}>{f}</li>
             ))}
           </ul>
-          <div className="pt-1">
-            <Link
-              to={`/${product.relic}`}
-              className={`text-xs ${accentText} hover:underline`}
-            >
-              See it in the app →
-            </Link>
-          </div>
+
+          <Link
+            to={`/${product.relic}`}
+            className={`inline-block text-xs ${accentText} hover:underline`}
+          >
+            See it in the app →
+          </Link>
         </div>
-      </section>
 
-      {/* Tier selector */}
-      <section className="space-y-5">
-        <div className={`border-t ${accentBorder} opacity-20`} />
-        <h2 className="font-display text-xl text-relic-parchment">
-          Choose your version
-        </h2>
+        {/* ── Right col: tier selector ── */}
+        <div className="space-y-3 mt-5 sm:mt-0">
+          <div className={`border-t ${accentBorder} opacity-20 sm:hidden`} />
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          {product.tiers.map((tier) => {
-            const isSelected = tier.kind === selectedTier.kind;
-            return (
-              <button
-                key={tier.kind}
-                onClick={() => setSelectedTier(tier)}
-                className={`card p-5 text-left flex flex-col gap-3 ring-1 transition-all focus:outline-none
-                  ${isSelected
-                    ? `ring-2 ${accentRing} bg-white/[0.04]`
-                    : "ring-transparent hover:ring-white/10"
-                  }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className={`font-display text-sm uppercase tracking-wider ${isSelected ? accentText : "text-relic-parchment/60"}`}>
-                      {tierKindLabel(tier.kind)}
-                    </p>
-                    <p className="text-relic-parchment text-base font-medium mt-0.5">
-                      {tier.label}
-                    </p>
+          <h2 className="font-display text-base sm:text-lg text-relic-parchment">
+            Choose your version
+          </h2>
+
+          {/* Tab strip */}
+          <div className="card divide-y divide-white/5 overflow-hidden">
+            {product.tiers.map((tier) => {
+              const isSelected = tier.kind === selectedTier.kind;
+              return (
+                <button
+                  key={tier.kind}
+                  onClick={() => setSelectedTier(tier)}
+                  className={`w-full flex items-center justify-between gap-3 px-4 py-3 text-left transition-colors focus:outline-none
+                    ${isSelected ? "bg-white/[0.05]" : "hover:bg-white/[0.03]"}`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className={`shrink-0 w-0.5 h-4 rounded-full transition-colors ${isSelected ? accentBg : "bg-white/10"}`} />
+                    <div className="min-w-0">
+                      <span className={`font-display text-[10px] uppercase tracking-widest ${isSelected ? accentText : "text-relic-parchment/40"}`}>
+                        {tierKindLabel(tier.kind)}
+                      </span>
+                      <p className={`text-sm font-medium truncate leading-tight ${isSelected ? "text-relic-parchment" : "text-relic-parchment/65"}`}>
+                        {tier.label}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right shrink-0">
+
+                  <div className="flex items-center gap-2 shrink-0">
                     {isPaidTier(tier) ? (
                       <>
-                        <p className="font-display text-xl text-relic-parchment">
-                          {tier.price}
-                        </p>
                         <StatusBadge status={tier.status} />
+                        <span className={`font-display text-base ${isSelected ? "text-relic-parchment" : "text-relic-parchment/55"}`}>
+                          {tier.price}
+                        </span>
                       </>
                     ) : (
-                      <p className={`font-display text-xl ${accentText}`}>Free</p>
+                      <span className={`font-display text-base ${isSelected ? accentText : "text-relic-parchment/55"}`}>
+                        Free
+                      </span>
                     )}
                   </div>
-                </div>
-                <p className="text-xs text-relic-parchment/60 leading-relaxed">
-                  {tier.description}
-                </p>
-              </button>
-            );
-          })}
-        </div>
+                </button>
+              );
+            })}
+          </div>
 
-        {/* Selected tier detail */}
-        <TierPanel tier={selectedTier} accentText={accentText} />
-      </section>
+          {/* Detail panel */}
+          <TierPanel tier={selectedTier} accentText={accentText} />
+        </div>
+      </div>
     </div>
   );
 }
 
 // --------------------------------------------------------- Tier panel
 
-interface TierPanelProps {
-  tier: ProductTier;
-  accentText: string;
-}
-
-function TierPanel({ tier, accentText }: TierPanelProps) {
+function TierPanel({ tier, accentText }: { tier: ProductTier; accentText: string }) {
   return (
-    <div className="card p-6 sm:p-8 space-y-6">
-      <div className="grid sm:grid-cols-2 gap-6">
-        <div className="space-y-2">
-          <h3 className={`font-display text-sm uppercase tracking-widest ${accentText}`}>
-            What's included
-          </h3>
-          <ul className="space-y-1.5">
-            {tier.includes.map((item) => (
-              <li key={item} className="flex items-start gap-2 text-sm text-relic-parchment/80">
-                <span className={`mt-0.5 shrink-0 ${accentText}`}>✦</span>
-                {item}
-              </li>
-            ))}
-          </ul>
-        </div>
+    <div className="card p-4 sm:p-5 space-y-4">
+      <div>
+        <h3 className={`font-display text-xs uppercase tracking-widest mb-2 ${accentText}`}>
+          What's included
+        </h3>
+        <ul className="space-y-1">
+          {tier.includes.map((item) => (
+            <li key={item} className="flex items-start gap-2 text-xs text-relic-parchment/75">
+              <span className={`mt-px shrink-0 ${accentText}`}>✦</span>
+              {item}
+            </li>
+          ))}
+        </ul>
+      </div>
 
-        <div className="flex flex-col justify-end gap-3">
-          {isPaidTier(tier) ? (
-            <PaidCTA tier={tier} />
-          ) : (
-            <DiyCTA tier={tier} accentText={accentText} />
-          )}
-        </div>
+      <div className={`border-t border-white/5 pt-4`}>
+        {isPaidTier(tier) ? (
+          <PaidCTA tier={tier} />
+        ) : (
+          <DiyCTA tier={tier} accentText={accentText} />
+        )}
       </div>
     </div>
   );
@@ -188,27 +195,27 @@ function PaidCTA({ tier }: { tier: PaidTier }) {
 
   if (tier.status === "available") {
     return (
-      <>
-        <div className="flex items-baseline gap-2">
-          <span className="font-display text-3xl text-relic-parchment">{tier.price}</span>
-          <span className="text-xs uppercase tracking-wider text-relic-parchment/40">USD</span>
+      <div className="space-y-2">
+        <div className="flex items-baseline gap-1.5">
+          <span className="font-display text-2xl text-relic-parchment">{tier.price}</span>
+          <span className="text-[10px] uppercase tracking-wider text-relic-parchment/40">USD</span>
         </div>
-        <button className="btn-primary w-full" disabled>
+        <button className="btn-primary w-full text-sm" disabled>
           Add to cart (checkout coming soon)
         </button>
-      </>
+      </div>
     );
   }
 
   return (
-    <>
-      <div className="flex items-baseline gap-2">
-        <span className="font-display text-3xl text-relic-parchment">{tier.price}</span>
-        <span className="text-xs uppercase tracking-wider text-relic-parchment/40">USD</span>
+    <div className="space-y-2">
+      <div className="flex items-baseline gap-2 flex-wrap">
+        <span className="font-display text-2xl text-relic-parchment">{tier.price}</span>
+        <span className="text-[10px] uppercase tracking-wider text-relic-parchment/40">USD</span>
         <StatusBadge status={tier.status} />
       </div>
       {notified ? (
-        <p className="text-sm text-emerald-300/80 text-center py-2">
+        <p className="text-sm text-emerald-300/80 py-1">
           Got it — we'll email you when this opens.
         </p>
       ) : (
@@ -226,22 +233,21 @@ function PaidCTA({ tier }: { tier: PaidTier }) {
           </button>
         </form>
       )}
-    </>
+    </div>
   );
 }
 
 function DiyCTA({ tier, accentText }: { tier: DiyTier; accentText: string }) {
   return (
-    <>
-      <p className="text-sm text-relic-parchment/60 leading-relaxed">
-        Everything you need to build your own is on GitHub — schematics,
-        firmware, and a full parts list. No account required.
+    <div className="space-y-2">
+      <p className="text-xs text-relic-parchment/55 leading-relaxed">
+        Full schematics, firmware, and parts list on GitHub. No cost, no waitlist.
       </p>
       <a
         href={tier.partsListUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="btn-primary w-full text-center text-sm"
+        className="btn-primary w-full text-center text-sm block"
       >
         View parts list
       </a>
@@ -249,11 +255,11 @@ function DiyCTA({ tier, accentText }: { tier: DiyTier; accentText: string }) {
         href={tier.firmwareUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className={`btn-ghost w-full text-center text-sm ${accentText}`}
+        className={`btn-ghost w-full text-center text-sm block ${accentText}`}
       >
         Browse firmware →
       </a>
-    </>
+    </div>
   );
 }
 
