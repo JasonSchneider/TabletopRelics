@@ -24,6 +24,7 @@ interface BleContextValue {
   connect: () => Promise<void>;
   disconnect: () => void;
   send: (cmd: RelicCommand) => Promise<void>;
+  sendFast: (cmd: RelicCommand) => void;
 }
 
 const BleContext = createContext<BleContextValue | null>(null);
@@ -95,10 +96,12 @@ export function BleProvider({ children }: { children: ReactNode }) {
 
   const send = useCallback(async (cmd: RelicCommand) => {
     const current = deviceRef.current;
-    if (!current) {
-      throw new Error("No relic connected.");
-    }
+    if (!current) throw new Error("No relic connected.");
     await current.send(cmd);
+  }, []);
+
+  const sendFast = useCallback((cmd: RelicCommand) => {
+    deviceRef.current?.sendFast(cmd);
   }, []);
 
   // Auto-disconnect on unmount to avoid leaking connections during HMR.
@@ -119,6 +122,7 @@ export function BleProvider({ children }: { children: ReactNode }) {
     connect,
     disconnect,
     send,
+    sendFast,
   };
 
   return <BleContext.Provider value={value}>{children}</BleContext.Provider>;

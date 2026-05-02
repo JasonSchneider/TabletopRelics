@@ -119,12 +119,15 @@ export class BleDevice {
   }
 
   async send(cmd: RelicCommand): Promise<void> {
-    if (!this.commandChar) {
-      throw new Error("Not connected — cannot send command.");
-    }
-    // writeValueWithoutResponse is faster but writeValueWithResponse is more
-    // reliable for important commands; default to with-response for safety.
+    if (!this.commandChar) throw new Error("Not connected — cannot send command.");
     await this.commandChar.writeValueWithResponse(encodeCommand(cmd));
+  }
+
+  // Fire-and-forget write — no ACK wait. Use for high-frequency updates
+  // (slider, real-time color) where latency matters more than reliability.
+  sendFast(cmd: RelicCommand): void {
+    if (!this.commandChar) return;
+    this.commandChar.writeValueWithoutResponse(encodeCommand(cmd)).catch(() => {});
   }
 
   onState(listener: Listener<RelicState>): () => void {
