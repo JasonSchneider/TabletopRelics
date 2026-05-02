@@ -8,6 +8,7 @@ const navItems = [
   { to: "/lantern", label: "Lantern" },
   { to: "/fairy-stones", label: "Fairy Stones" },
   { to: "/adventures", label: "Adventures" },
+  { to: "/store", label: "Store" },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
