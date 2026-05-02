@@ -1,12 +1,18 @@
 import { Link, NavLink } from "react-router-dom";
 import type { ReactNode } from "react";
 import { ConnectionBadge } from "./ConnectionBadge";
+import { RelicsMenu } from "./RelicsMenu";
 
-const navItems = [
-  { to: "/", label: "Home", end: true },
-  { to: "/compass", label: "Compass" },
-  { to: "/lantern", label: "Lantern" },
-  { to: "/fairy-stones", label: "Fairy Stones" },
+interface NavItem {
+  to: string;
+  label: string;
+  end?: boolean;
+}
+
+// Top-level nav items, in order. The Relics dropdown is rendered in
+// the middle of this list as a special case (see the nav body below).
+const leftItems: NavItem[] = [{ to: "/", label: "Home", end: true }];
+const rightItems: NavItem[] = [
   { to: "/adventures", label: "Adventures" },
   { to: "/store", label: "Store" },
 ];
@@ -27,22 +33,17 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         <nav className="mx-auto max-w-5xl px-2 sm:px-4 pb-2 overflow-x-auto">
           <ul className="flex gap-1 sm:gap-2 text-sm">
-            {navItems.map((item) => (
+            {leftItems.map((item) => (
               <li key={item.to} className="shrink-0">
-                <NavLink
-                  to={item.to}
-                  end={item.end}
-                  className={({ isActive }) =>
-                    [
-                      "block px-3 py-1.5 rounded-md transition-colors whitespace-nowrap",
-                      isActive
-                        ? "bg-relic-glow/20 text-relic-parchment"
-                        : "text-relic-parchment/70 hover:text-relic-parchment hover:bg-white/5",
-                    ].join(" ")
-                  }
-                >
-                  {item.label}
-                </NavLink>
+                <NavLinkItem item={item} />
+              </li>
+            ))}
+            <li className="shrink-0">
+              <RelicsMenu />
+            </li>
+            {rightItems.map((item) => (
+              <li key={item.to} className="shrink-0">
+                <NavLinkItem item={item} />
               </li>
             ))}
           </ul>
@@ -57,6 +58,25 @@ export function AppShell({ children }: { children: ReactNode }) {
         Tabletop Relics — control your enchanted props.
       </footer>
     </div>
+  );
+}
+
+function NavLinkItem({ item }: { item: NavItem }) {
+  return (
+    <NavLink
+      to={item.to}
+      end={item.end}
+      className={({ isActive }) =>
+        [
+          "block px-3 py-1.5 rounded-md transition-colors whitespace-nowrap",
+          isActive
+            ? "bg-relic-glow/20 text-relic-parchment"
+            : "text-relic-parchment/70 hover:text-relic-parchment hover:bg-white/5",
+        ].join(" ")
+      }
+    >
+      {item.label}
+    </NavLink>
   );
 }
 
