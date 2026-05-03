@@ -69,9 +69,9 @@ export type RelicCommand =
 
 /** State pushed from the prop via CHAR_STATE_UUID notifications. */
 export type RelicState =
-  | { type: "compass"; mode: "ambient" | "quest" | "manual" | "spin" | "pulse" | "random" | "off"; heading: number; target: number; calibrated: boolean }
-  | { type: "lantern"; intensity: number; color: { r: number; g: number; b: number }; effect: string | null }
-  | { type: "fairy-stones"; pattern: string; color: { r: number; g: number; b: number }; connectedStones: string[] };
+  | { type: "compass"; mode: "ambient" | "quest" | "manual" | "spin" | "pulse" | "random" | "off"; heading: number; target: number; calibrated: boolean; charging?: boolean }
+  | { type: "lantern"; intensity: number; color: { r: number; g: number; b: number }; effect: string | null; charging?: boolean }
+  | { type: "fairy-stones"; pattern: string; color: { r: number; g: number; b: number }; connectedStones: string[]; charging?: boolean };
 
 /** Telemetry stream (CHAR_TELEMETRY_UUID) — high-frequency sensor data. */
 export interface Telemetry {
