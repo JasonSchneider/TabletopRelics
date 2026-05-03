@@ -2,6 +2,7 @@ import { Link, NavLink } from "react-router-dom";
 import type { ReactNode } from "react";
 import { ConnectionBadge } from "./ConnectionBadge";
 import { RelicsMenu } from "./RelicsMenu";
+import { UpdateBanner } from "./UpdateBanner";
 
 interface NavItem {
   to: string;
@@ -57,6 +58,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <footer className="mx-auto w-full max-w-5xl px-4 py-6 text-xs text-relic-parchment/40 text-center">
         Tabletop Relics — control your enchanted props.
       </footer>
+      <UpdateBanner />
     </div>
   );
 }
