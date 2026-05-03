@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { useBle } from "../ble/useBle";
 import { RelicAdventures } from "../components/RelicAdventures";
+import { BatteryIcon } from "../components/BatteryIcon";
 
 type TopMode = "ambient" | "quest" | "manual" | "calibrate";
 type Effect  = "static" | "spin" | "pulse" | "random";
@@ -23,9 +24,10 @@ const COLOR_PRESETS = [
 ];
 
 export function Compass() {
-  const { status, send, sendFast, state } = useBle();
+  const { status, send, sendFast, state, battery } = useBle();
   const connected = status === "connected";
   const compassState = state?.type === "compass" ? state : null;
+  const charging = compassState?.charging ?? false;
 
   const [target, setTarget]       = useState(0);
   const [color, setColor]         = useState("#00b4ff");
@@ -109,6 +111,13 @@ export function Compass() {
           Point the needle at any bearing, run light effects, or let it drift
           to ambient mode. Connect a compass relic to begin.
         </p>
+        {battery !== null && (
+          <span className="flex items-center gap-1.5 text-xs text-relic-parchment/60">
+            <BatteryIcon percent={battery} charging={charging} />
+            <span>{battery}%</span>
+            {charging && <span className="text-amber-400 font-medium">· Charging</span>}
+          </span>
+        )}
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[auto,1fr] items-start">
