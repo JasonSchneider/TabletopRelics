@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { getAdventureById } from "../adventures";
+import { RelicDrawer } from "../components/RelicDrawer";
 import type { DeviceType } from "../ble/protocol";
 
 export function Adventure() {
@@ -28,6 +29,7 @@ export function Adventure() {
 
   return (
     <article className="space-y-8">
+      <RelicDrawer />
       <header className="space-y-3">
         <Link
           to="/adventures"
