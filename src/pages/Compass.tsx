@@ -30,6 +30,8 @@ export function Compass() {
   const [target, setTarget]       = useState(0);
   const [color, setColor]         = useState("#00b4ff");
   const [speed, setSpeed]         = useState(50);
+  const [spill, setSpill]         = useState(0);
+  const [allLeds, setAllLeds]     = useState(false);
   const [randomColor, setRandomColor] = useState(false);
   const [topMode, setTopMode]     = useState<TopMode>("ambient");
   const [effect, setEffect]       = useState<Effect>("static");
@@ -68,6 +70,17 @@ export function Compass() {
   function handleSpeedChange(value: number) {
     setSpeed(value);
     sendFast({ op: "compass.setSpeed", speed: value });
+  }
+
+  function handleSpillChange(value: number) {
+    setSpill(value);
+    sendFast({ op: "compass.setSpill", spill: value });
+  }
+
+  function handleAllLedsToggle() {
+    const next = !allLeds;
+    setAllLeds(next);
+    send({ op: "compass.setAll", all: next });
   }
 
   function handleColorChange(hex: string) {
@@ -154,11 +167,11 @@ export function Compass() {
                 </div>
               </div>
 
-              {/* Bearing — static only */}
-              {effect === "static" && (
-                <div>
+              {/* Bearing — static and pulse */}
+              {(effect === "static" || effect === "pulse") && (
+                <div className={allLeds ? "opacity-40 pointer-events-none" : ""}>
                   <label className="text-xs uppercase tracking-wider text-relic-parchment/60">
-                    Bearing (live)
+                    Bearing {effect === "pulse" ? "(active LED)" : "(live)"}
                   </label>
                   <input type="range" min={0} max={359} value={target}
                     onChange={(e) => handleBearingChange(Number(e.target.value))}
@@ -172,7 +185,46 @@ export function Compass() {
                 </div>
               )}
 
-              {/* Speed — animated effects */}
+              {/* All toggle — static and pulse */}
+              {(effect === "static" || effect === "pulse") && (
+                <div className="flex items-center justify-between">
+                  <label className="text-xs uppercase tracking-wider text-relic-parchment/60">
+                    All LEDs
+                  </label>
+                  <button
+                    disabled={!connected}
+                    onClick={handleAllLedsToggle}
+                    className={[
+                      "text-xs px-3 py-1 rounded border transition-colors",
+                      allLeds
+                        ? "bg-relic-rune/30 border-relic-rune/60 text-relic-parchment"
+                        : "bg-white/5 border-white/10 text-relic-parchment/50 hover:text-relic-parchment",
+                    ].join(" ")}
+                  >
+                    {allLeds ? "On" : "Off"}
+                  </button>
+                </div>
+              )}
+
+              {/* Spill — static and pulse when not all */}
+              {(effect === "static" || effect === "pulse") && !allLeds && (
+                <div>
+                  <label className="text-xs uppercase tracking-wider text-relic-parchment/60">
+                    Spill
+                  </label>
+                  <input type="range" min={0} max={4} step={1} value={spill}
+                    onChange={(e) => handleSpillChange(Number(e.target.value))}
+                    className="w-full mt-2 accent-relic-glow"
+                  />
+                  <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
+                    <span>None</span>
+                    <span className="text-relic-rune font-display text-base">{spill}</span>
+                    <span>Wide</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Speed — pulse, spin, and random */}
               {effect !== "static" && (
                 <div>
                   <label className="text-xs uppercase tracking-wider text-relic-parchment/60">

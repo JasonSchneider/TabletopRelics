@@ -52,6 +52,8 @@ export type RelicCommand =
   | { op: "compass.setColor"; r: number; g: number; b: number }
   | { op: "compass.setColor"; random: true }
   | { op: "compass.setSpeed"; speed: number /* 0–100 */ }
+  | { op: "compass.setSpill"; spill: number /* 0–4 neighbors per side */ }
+  | { op: "compass.setAll"; all: boolean }
   | { op: "compass.calibrate" }
   | { op: "compass.setMode"; mode: "ambient" | "quest" | "manual" | "spin" | "pulse" | "random" | "off" }
 
