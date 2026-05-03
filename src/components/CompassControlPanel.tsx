@@ -2,7 +2,6 @@ import { useRef, useState } from "react";
 import type { RelicCommand } from "../ble/protocol";
 
 type TopMode = "ambient" | "quest" | "manual" | "calibrate";
-type Effect  = "static" | "spin" | "pulse" | "random";
 
 function hexToRgb(hex: string) {
   return {
@@ -28,35 +27,45 @@ interface Props {
 }
 
 export function CompassControlPanel({ connected, send, sendFast }: Props) {
-  const [target, setTarget]           = useState(0);
-  const [color, setColor]             = useState("#00b4ff");
-  const [speed, setSpeed]             = useState(50);
-  const [spill, setSpill]             = useState(0);
-  const [allLeds, setAllLeds]         = useState(false);
-  const [randomColor, setRandomColor] = useState(false);
-  const [topMode, setTopMode]         = useState<TopMode>("ambient");
-  const [effect, setEffect]           = useState<Effect>("static");
+  const [topMode, setTopMode]               = useState<TopMode>("ambient");
+  const [ledsOn, setLedsOn]                 = useState(true);
+  const [target, setTarget]                 = useState(0);
+  const [color, setColor]                   = useState("#00b4ff");
+  const [spill, setSpill]                   = useState(0);
+  const [allLeds, setAllLeds]               = useState(false);
+  const [randomColor, setRandomColor]       = useState(false);
+  const [spinEnabled, setSpinEnabled]       = useState(false);
+  const [spinDirection, setSpinDirection]   = useState<"cw" | "ccw">("cw");
+  const [spinSpeed, setSpinSpeed]           = useState(50);
+  const [pulseEnabled, setPulseEnabled]     = useState(false);
+  const [pulseSpeed, setPulseSpeed]         = useState(50);
 
   const bearingDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isManual = topMode === "manual";
+
+  /** Derive the firmware mode from current manual sub-state. */
+  function manualFirmwareMode() {
+    if (spinEnabled) return "spin";
+    if (pulseEnabled) return "pulse";
+    return "manual";
+  }
 
   function switchTopMode(m: TopMode) {
     setTopMode(m);
     if (!connected) return;
     if (m === "calibrate") {
       send({ op: "compass.calibrate" });
+    } else if (m === "manual") {
+      send({ op: "compass.setMode", mode: manualFirmwareMode() });
     } else {
-      const fm = m === "manual" ? (effect === "static" ? "manual" : effect) : m;
-      send({ op: "compass.setMode", mode: fm as any });
+      send({ op: "compass.setMode", mode: m });
     }
   }
 
-  function switchEffect(e: Effect) {
-    setEffect(e);
-    if (!connected) return;
-    const fm = e === "static" ? "manual" : e;
-    send({ op: "compass.setMode", mode: fm as any });
-    if (e !== "static") send({ op: "compass.setSpeed", speed });
+  function handleLedsToggle() {
+    const next = !ledsOn;
+    setLedsOn(next);
+    if (connected) send({ op: "compass.setLeds", on: next });
   }
 
   function handleBearingChange(value: number) {
@@ -67,20 +76,15 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
     }, 16);
   }
 
-  function handleSpeedChange(value: number) {
-    setSpeed(value);
-    sendFast({ op: "compass.setSpeed", speed: value });
+  function handleAllLedsToggle() {
+    const next = !allLeds;
+    setAllLeds(next);
+    if (connected) send({ op: "compass.setAll", all: next });
   }
 
   function handleSpillChange(value: number) {
     setSpill(value);
     sendFast({ op: "compass.setSpill", spill: value });
-  }
-
-  function handleAllLedsToggle() {
-    const next = !allLeds;
-    setAllLeds(next);
-    if (connected) send({ op: "compass.setAll", all: next });
   }
 
   function handleColorChange(hex: string) {
@@ -101,9 +105,65 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
     }
   }
 
+  function handleSpinToggle() {
+    const next = !spinEnabled;
+    setSpinEnabled(next);
+    if (next) setPulseEnabled(false); // mutually exclusive firmware modes
+    if (!connected) return;
+    if (next) {
+      send({ op: "compass.setMode", mode: "spin" });
+      send({ op: "compass.setSpinDirection", direction: spinDirection });
+      send({ op: "compass.setSpeed", speed: spinSpeed });
+    } else {
+      send({ op: "compass.setMode", mode: pulseEnabled ? "pulse" : "manual" });
+    }
+  }
+
+  function handleSpinDirection(dir: "cw" | "ccw") {
+    setSpinDirection(dir);
+    if (connected && spinEnabled) send({ op: "compass.setSpinDirection", direction: dir });
+  }
+
+  function handleSpinSpeedChange(value: number) {
+    setSpinSpeed(value);
+    if (spinEnabled) sendFast({ op: "compass.setSpeed", speed: value });
+  }
+
+  function handlePulseToggle() {
+    const next = !pulseEnabled;
+    setPulseEnabled(next);
+    if (next) setSpinEnabled(false); // mutually exclusive firmware modes
+    if (!connected) return;
+    if (next) {
+      send({ op: "compass.setMode", mode: "pulse" });
+      send({ op: "compass.setSpeed", speed: pulseSpeed });
+    } else {
+      send({ op: "compass.setMode", mode: spinEnabled ? "spin" : "manual" });
+    }
+  }
+
+  function handlePulseSpeedChange(value: number) {
+    setPulseSpeed(value);
+    if (pulseEnabled) sendFast({ op: "compass.setSpeed", speed: value });
+  }
+
   return (
     <div className="space-y-5">
 
+      {/* LEDs on/off — always visible */}
+      <div className="flex items-center justify-between">
+        <p className="text-xs uppercase tracking-wider text-relic-parchment/60">LEDs</p>
+        <button onClick={handleLedsToggle}
+          className={[
+            "text-xs px-3 py-1 rounded border transition-colors",
+            ledsOn
+              ? "bg-relic-rune/30 border-relic-rune/60 text-relic-parchment"
+              : "bg-white/5 border-white/10 text-relic-parchment/50 hover:text-relic-parchment",
+          ].join(" ")}
+        >{ledsOn ? "On" : "Off"}</button>
+      </div>
+
+      {/* Mode */}
       <div>
         <p className="text-xs uppercase tracking-wider text-relic-parchment/60 mb-2">Mode</p>
         <div className="flex gap-2 flex-wrap">
@@ -122,54 +182,35 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
 
       {isManual && (
         <>
-          <div>
-            <p className="text-xs uppercase tracking-wider text-relic-parchment/60 mb-2">Effect</p>
-            <div className="flex gap-2 flex-wrap">
-              {(["static", "spin", "pulse", "random"] as Effect[]).map((e) => (
-                <button key={e} onClick={() => switchEffect(e)}
-                  className={[
-                    "px-3 py-1.5 rounded-md text-sm capitalize transition-colors",
-                    effect === e
-                      ? "bg-relic-rune/40 text-relic-parchment border border-relic-rune/60"
-                      : "bg-white/5 text-relic-parchment/60 hover:text-relic-parchment hover:bg-white/10 border border-white/10",
-                  ].join(" ")}
-                >{e}</button>
-              ))}
+          {/* Bearing */}
+          <div className={allLeds ? "opacity-40 pointer-events-none" : ""}>
+            <label className="text-xs uppercase tracking-wider text-relic-parchment/60">Bearing</label>
+            <input type="range" min={0} max={359} value={target}
+              onChange={(e) => handleBearingChange(Number(e.target.value))}
+              className="w-full mt-2 accent-relic-glow"
+            />
+            <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
+              <span>0°</span>
+              <span className="text-relic-rune font-display text-base">{target}°</span>
+              <span>359°</span>
             </div>
           </div>
 
-          {(effect === "static" || effect === "pulse") && (
-            <div className={allLeds ? "opacity-40 pointer-events-none" : ""}>
-              <label className="text-xs uppercase tracking-wider text-relic-parchment/60">
-                Bearing {effect === "pulse" ? "(active LED)" : "(live)"}
-              </label>
-              <input type="range" min={0} max={359} value={target}
-                onChange={(e) => handleBearingChange(Number(e.target.value))}
-                className="w-full mt-2 accent-relic-glow"
-              />
-              <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
-                <span>0°</span>
-                <span className="text-relic-rune font-display text-base">{target}°</span>
-                <span>359°</span>
-              </div>
-            </div>
-          )}
+          {/* All LEDs */}
+          <div className="flex items-center justify-between">
+            <label className="text-xs uppercase tracking-wider text-relic-parchment/60">All LEDs</label>
+            <button onClick={handleAllLedsToggle}
+              className={[
+                "text-xs px-3 py-1 rounded border transition-colors",
+                allLeds
+                  ? "bg-relic-rune/30 border-relic-rune/60 text-relic-parchment"
+                  : "bg-white/5 border-white/10 text-relic-parchment/50 hover:text-relic-parchment",
+              ].join(" ")}
+            >{allLeds ? "On" : "Off"}</button>
+          </div>
 
-          {(effect === "static" || effect === "pulse") && (
-            <div className="flex items-center justify-between">
-              <label className="text-xs uppercase tracking-wider text-relic-parchment/60">All LEDs</label>
-              <button onClick={handleAllLedsToggle}
-                className={[
-                  "text-xs px-3 py-1 rounded border transition-colors",
-                  allLeds
-                    ? "bg-relic-rune/30 border-relic-rune/60 text-relic-parchment"
-                    : "bg-white/5 border-white/10 text-relic-parchment/50 hover:text-relic-parchment",
-                ].join(" ")}
-              >{allLeds ? "On" : "Off"}</button>
-            </div>
-          )}
-
-          {(effect === "static" || effect === "pulse") && !allLeds && (
+          {/* Spill */}
+          {!allLeds && (
             <div>
               <label className="text-xs uppercase tracking-wider text-relic-parchment/60">Spill</label>
               <input type="range" min={0} max={4} step={1} value={spill}
@@ -184,21 +225,82 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
             </div>
           )}
 
-          {effect !== "static" && (
-            <div>
-              <label className="text-xs uppercase tracking-wider text-relic-parchment/60">Speed</label>
-              <input type="range" min={1} max={100} value={speed}
-                onChange={(e) => handleSpeedChange(Number(e.target.value))}
-                className="w-full mt-2 accent-relic-glow"
-              />
-              <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
-                <span>Slow</span>
-                <span className="text-relic-rune font-display text-base">{speed}</span>
-                <span>Fast</span>
-              </div>
+          {/* Spin */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs uppercase tracking-wider text-relic-parchment/60">Spin</p>
+              <button onClick={handleSpinToggle}
+                className={[
+                  "text-xs px-3 py-1 rounded border transition-colors",
+                  spinEnabled
+                    ? "bg-relic-rune/30 border-relic-rune/60 text-relic-parchment"
+                    : "bg-white/5 border-white/10 text-relic-parchment/50 hover:text-relic-parchment",
+                ].join(" ")}
+              >{spinEnabled ? "On" : "Off"}</button>
             </div>
-          )}
+            {spinEnabled && (
+              <>
+                <div className="flex items-center gap-2 pl-1">
+                  <p className="text-xs text-relic-parchment/50 w-20 shrink-0">Direction</p>
+                  <div className="flex gap-1.5">
+                    {(["cw", "ccw"] as const).map((dir) => (
+                      <button key={dir} onClick={() => handleSpinDirection(dir)}
+                        className={[
+                          "px-2.5 py-1 rounded text-xs uppercase tracking-wide border transition-colors",
+                          spinDirection === dir
+                            ? "bg-relic-rune/40 border-relic-rune/60 text-relic-parchment"
+                            : "bg-white/5 border-white/10 text-relic-parchment/50 hover:text-relic-parchment",
+                        ].join(" ")}
+                      >{dir}</button>
+                    ))}
+                  </div>
+                </div>
+                <div className="pl-1">
+                  <label className="text-xs text-relic-parchment/50">Speed</label>
+                  <input type="range" min={1} max={100} value={spinSpeed}
+                    onChange={(e) => handleSpinSpeedChange(Number(e.target.value))}
+                    className="w-full mt-2 accent-relic-glow"
+                  />
+                  <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
+                    <span>Slow</span>
+                    <span className="text-relic-rune font-display text-base">{spinSpeed}</span>
+                    <span>Fast</span>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
 
+          {/* Pulse */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs uppercase tracking-wider text-relic-parchment/60">Pulse</p>
+              <button onClick={handlePulseToggle}
+                className={[
+                  "text-xs px-3 py-1 rounded border transition-colors",
+                  pulseEnabled
+                    ? "bg-relic-rune/30 border-relic-rune/60 text-relic-parchment"
+                    : "bg-white/5 border-white/10 text-relic-parchment/50 hover:text-relic-parchment",
+                ].join(" ")}
+              >{pulseEnabled ? "On" : "Off"}</button>
+            </div>
+            {pulseEnabled && (
+              <div className="pl-1">
+                <label className="text-xs text-relic-parchment/50">Speed</label>
+                <input type="range" min={1} max={100} value={pulseSpeed}
+                  onChange={(e) => handlePulseSpeedChange(Number(e.target.value))}
+                  className="w-full mt-2 accent-relic-glow"
+                />
+                <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
+                  <span>Slow</span>
+                  <span className="text-relic-rune font-display text-base">{pulseSpeed}</span>
+                  <span>Fast</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Color */}
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-xs uppercase tracking-wider text-relic-parchment/60">Color</label>
