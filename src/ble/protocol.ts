@@ -54,8 +54,10 @@ export type RelicCommand =
   | { op: "compass.setSpeed"; speed: number /* 0–100 */ }
   | { op: "compass.setSpill"; spill: number /* 0–4 neighbors per side */ }
   | { op: "compass.setAll"; all: boolean }
+  | { op: "compass.setLeds"; on: boolean }
+  | { op: "compass.setSpinDirection"; direction: "cw" | "ccw" }
   | { op: "compass.calibrate" }
-  | { op: "compass.setMode"; mode: "ambient" | "quest" | "manual" | "spin" | "pulse" | "random" | "off" }
+  | { op: "compass.setMode"; mode: "ambient" | "quest" | "manual" | "spin" | "pulse" | "spin-pulse" | "random" | "off" }
 
   // Lantern
   | { op: "lantern.setFlame"; intensity: number /* 0–100 */ }
@@ -69,7 +71,7 @@ export type RelicCommand =
 
 /** State pushed from the prop via CHAR_STATE_UUID notifications. */
 export type RelicState =
-  | { type: "compass"; mode: "ambient" | "quest" | "manual" | "spin" | "pulse" | "random" | "off"; heading: number; target: number; calibrated: boolean; charging?: boolean }
+  | { type: "compass"; mode: "ambient" | "quest" | "manual" | "spin" | "pulse" | "spin-pulse" | "random" | "off"; heading: number; target: number; calibrated: boolean; charging?: boolean }
   | { type: "lantern"; intensity: number; color: { r: number; g: number; b: number }; effect: string | null; charging?: boolean }
   | { type: "fairy-stones"; pattern: string; color: { r: number; g: number; b: number }; connectedStones: string[]; charging?: boolean };
 
