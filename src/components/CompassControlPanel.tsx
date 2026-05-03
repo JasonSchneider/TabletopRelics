@@ -105,17 +105,22 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
     }
   }
 
+  function derivedManualMode(spin: boolean, pulse: boolean) {
+    if (spin && pulse) return "spin-pulse" as const;
+    if (spin) return "spin" as const;
+    if (pulse) return "pulse" as const;
+    return "manual" as const;
+  }
+
   function handleSpinToggle() {
     const next = !spinEnabled;
     setSpinEnabled(next);
-    if (next) setPulseEnabled(false); // mutually exclusive firmware modes
     if (!connected) return;
+    const mode = derivedManualMode(next, pulseEnabled);
+    send({ op: "compass.setMode", mode });
     if (next) {
-      send({ op: "compass.setMode", mode: "spin" });
       send({ op: "compass.setSpinDirection", direction: spinDirection });
       send({ op: "compass.setSpeed", speed: spinSpeed });
-    } else {
-      send({ op: "compass.setMode", mode: pulseEnabled ? "pulse" : "manual" });
     }
   }
 
@@ -132,14 +137,10 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
   function handlePulseToggle() {
     const next = !pulseEnabled;
     setPulseEnabled(next);
-    if (next) setSpinEnabled(false); // mutually exclusive firmware modes
     if (!connected) return;
-    if (next) {
-      send({ op: "compass.setMode", mode: "pulse" });
-      send({ op: "compass.setSpeed", speed: pulseSpeed });
-    } else {
-      send({ op: "compass.setMode", mode: spinEnabled ? "spin" : "manual" });
-    }
+    const mode = derivedManualMode(spinEnabled, next);
+    send({ op: "compass.setMode", mode });
+    if (next) send({ op: "compass.setSpeed", speed: pulseSpeed });
   }
 
   function handlePulseSpeedChange(value: number) {
@@ -238,37 +239,33 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
                 ].join(" ")}
               >{spinEnabled ? "On" : "Off"}</button>
             </div>
-            {spinEnabled && (
-              <>
-                <div className="flex items-center gap-2 pl-1">
-                  <p className="text-xs text-relic-parchment/50 w-20 shrink-0">Direction</p>
-                  <div className="flex gap-1.5">
-                    {(["cw", "ccw"] as const).map((dir) => (
-                      <button key={dir} onClick={() => handleSpinDirection(dir)}
-                        className={[
-                          "px-2.5 py-1 rounded text-xs uppercase tracking-wide border transition-colors",
-                          spinDirection === dir
-                            ? "bg-relic-rune/40 border-relic-rune/60 text-relic-parchment"
-                            : "bg-white/5 border-white/10 text-relic-parchment/50 hover:text-relic-parchment",
-                        ].join(" ")}
-                      >{dir}</button>
-                    ))}
-                  </div>
-                </div>
-                <div className="pl-1">
-                  <label className="text-xs text-relic-parchment/50">Speed</label>
-                  <input type="range" min={1} max={100} value={spinSpeed}
-                    onChange={(e) => handleSpinSpeedChange(Number(e.target.value))}
-                    className="w-full mt-2 accent-relic-glow"
-                  />
-                  <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
-                    <span>Slow</span>
-                    <span className="text-relic-rune font-display text-base">{spinSpeed}</span>
-                    <span>Fast</span>
-                  </div>
-                </div>
-              </>
-            )}
+            <div className="flex items-center gap-2 pl-1">
+              <p className="text-xs text-relic-parchment/50 w-20 shrink-0">Direction</p>
+              <div className="flex gap-1.5">
+                {(["cw", "ccw"] as const).map((dir) => (
+                  <button key={dir} onClick={() => handleSpinDirection(dir)}
+                    className={[
+                      "px-2.5 py-1 rounded text-xs uppercase tracking-wide border transition-colors",
+                      spinDirection === dir
+                        ? "bg-relic-rune/40 border-relic-rune/60 text-relic-parchment"
+                        : "bg-white/5 border-white/10 text-relic-parchment/50 hover:text-relic-parchment",
+                    ].join(" ")}
+                  >{dir}</button>
+                ))}
+              </div>
+            </div>
+            <div className="pl-1">
+              <label className="text-xs text-relic-parchment/50">Speed</label>
+              <input type="range" min={1} max={100} value={spinSpeed}
+                onChange={(e) => handleSpinSpeedChange(Number(e.target.value))}
+                className="w-full mt-2 accent-relic-glow"
+              />
+              <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
+                <span>Slow</span>
+                <span className="text-relic-rune font-display text-base">{spinSpeed}</span>
+                <span>Fast</span>
+              </div>
+            </div>
           </div>
 
           {/* Pulse */}
@@ -284,20 +281,18 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
                 ].join(" ")}
               >{pulseEnabled ? "On" : "Off"}</button>
             </div>
-            {pulseEnabled && (
-              <div className="pl-1">
-                <label className="text-xs text-relic-parchment/50">Speed</label>
-                <input type="range" min={1} max={100} value={pulseSpeed}
-                  onChange={(e) => handlePulseSpeedChange(Number(e.target.value))}
-                  className="w-full mt-2 accent-relic-glow"
-                />
-                <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
-                  <span>Slow</span>
-                  <span className="text-relic-rune font-display text-base">{pulseSpeed}</span>
-                  <span>Fast</span>
-                </div>
+            <div className="pl-1">
+              <label className="text-xs text-relic-parchment/50">Speed</label>
+              <input type="range" min={1} max={100} value={pulseSpeed}
+                onChange={(e) => handlePulseSpeedChange(Number(e.target.value))}
+                className="w-full mt-2 accent-relic-glow"
+              />
+              <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
+                <span>Slow</span>
+                <span className="text-relic-rune font-display text-base">{pulseSpeed}</span>
+                <span>Fast</span>
               </div>
-            )}
+            </div>
           </div>
 
           {/* Color */}
