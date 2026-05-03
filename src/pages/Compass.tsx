@@ -4,7 +4,7 @@ import { BatteryIcon } from "../components/BatteryIcon";
 import { CompassControlPanel } from "../components/CompassControlPanel";
 
 export function Compass() {
-  const { status, state, battery } = useBle();
+  const { status, state, battery, send, sendFast } = useBle();
   const connected = status === "connected";
   const compassState = state?.type === "compass" ? state : null;
   const charging = compassState?.charging ?? false;
@@ -45,7 +45,7 @@ export function Compass() {
 
         {/* Controls */}
         <div className="card p-6">
-          <CompassControlPanel />
+          <CompassControlPanel connected={status === "connected"} send={send} sendFast={sendFast} />
         </div>
       </div>
 

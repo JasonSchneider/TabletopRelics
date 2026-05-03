@@ -1,15 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { useBle } from "../ble/useBle";
+import { useBle, type DeviceView } from "../ble/useBle";
 import { BatteryIcon } from "./BatteryIcon";
 import { CompassControlPanel } from "./CompassControlPanel";
 
 function relicRoute(type: string): string {
   switch (type) {
-    case "compass":     return "/compass";
-    case "lantern":     return "/lantern";
+    case "compass":      return "/compass";
+    case "lantern":      return "/lantern";
     case "fairy-stones": return "/fairy-stones";
-    default:            return "/";
+    default:             return "/";
   }
 }
 
@@ -22,11 +22,56 @@ function relicLabel(type: string): string {
   }
 }
 
+function DeviceControls({ device }: { device: DeviceView }) {
+  if (device.info.type === "compass") {
+    return (
+      <CompassControlPanel
+        connected={true}
+        send={device.send}
+        sendFast={device.sendFast}
+      />
+    );
+  }
+  return (
+    <div className="text-center py-10 space-y-2">
+      <p className="text-sm text-relic-parchment/50">
+        Quick controls aren't available for this device type yet.
+      </p>
+      <Link
+        to={relicRoute(device.info.type)}
+        className="btn-primary text-sm inline-block mt-2"
+      >
+        Open full controls
+      </Link>
+    </div>
+  );
+}
+
 export function RelicDrawer() {
   const [open, setOpen] = useState(false);
-  const { status, device, info, battery, state, connect } = useBle();
-  const connected = status === "connected";
-  const charging = (state as any)?.charging ?? false;
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const { devices, connect, status } = useBle();
+
+  const connecting = status === "connecting";
+
+  // When a new device connects, auto-select it and keep the drawer showing.
+  useEffect(() => {
+    if (devices.length === 0) {
+      setSelectedId(null);
+      return;
+    }
+    // If nothing is selected, or the selected device just disappeared, pick the first.
+    if (!selectedId || !devices.find(d => d.id === selectedId)) {
+      setSelectedId(devices[0].id);
+    }
+  }, [devices, selectedId]);
+
+  const selected = devices.find(d => d.id === selectedId) ?? devices[0] ?? null;
+  const tabDevice = selected ?? null;
+
+  // The FAB label: device name if one is connected, generic otherwise.
+  const fabLabel = selected ? relicLabel(selected.info.type) : "Relic";
+  const fabConnected = devices.length > 0;
 
   return (
     <>
@@ -39,27 +84,21 @@ export function RelicDrawer() {
           "flex flex-col items-center gap-2 py-4 px-2.5",
           "rounded-l-xl border border-r-0 border-white/10",
           "bg-relic-ink/90 backdrop-blur-sm shadow-xl",
-          "hover:bg-relic-ink transition-colors",
-          "select-none",
+          "hover:bg-relic-ink transition-colors select-none",
         ].join(" ")}
       >
-        {/* Status dot */}
         <span className={[
           "w-2 h-2 rounded-full shrink-0",
-          connected
+          fabConnected
             ? "bg-emerald-400 shadow-[0_0_6px_#34d399] animate-pulse"
             : "bg-white/20",
         ].join(" ")} />
-
-        {/* Vertical label */}
         <span
           className="text-[11px] font-display tracking-widest text-relic-parchment/70 uppercase leading-none"
           style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
         >
-          {connected && info ? relicLabel(info.type) : "Relic"}
+          {fabLabel}
         </span>
-
-        {/* Chevron hint */}
         <svg width="10" height="10" viewBox="0 0 10 10" className="text-relic-parchment/30 shrink-0">
           <path d="M3 2 L7 5 L3 8" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
@@ -83,76 +122,103 @@ export function RelicDrawer() {
           open ? "translate-x-0" : "translate-x-full",
         ].join(" ")}
       >
-        {/* Drawer header */}
-        <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-white/10 shrink-0">
-          <div className="min-w-0">
-            {connected && device && info ? (
-              <>
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399] animate-pulse shrink-0" />
-                  <p className="font-display text-base text-relic-parchment truncate">{device.name}</p>
-                </div>
-                <p className="flex items-center gap-1.5 text-xs text-relic-parchment/60 mt-0.5 ml-4">
-                  <BatteryIcon percent={battery} charging={charging} />
-                  <span>{battery !== null ? `${battery}%` : "–"}</span>
-                  {charging && <span className="text-amber-400">· Charging</span>}
-                  <span className="text-relic-parchment/30">·</span>
-                  <span>{relicLabel(info.type)}</span>
-                </p>
-              </>
-            ) : (
-              <p className="font-display text-base text-relic-parchment/50">No relic bonded</p>
-            )}
+        {/* Header */}
+        <div className="shrink-0 flex items-center justify-between gap-3 px-5 py-4 border-b border-white/10">
+          <p className="font-display text-base text-relic-parchment">
+            {devices.length > 0 ? "Relics" : "No relic bonded"}
+          </p>
+          <div className="flex items-center gap-2">
+            {/* Add another device */}
+            <button
+              onClick={connect}
+              disabled={connecting}
+              title="Bond another relic"
+              className="text-xs px-2 py-1 rounded border border-white/10 text-relic-parchment/50 hover:text-relic-parchment hover:border-white/20 transition-colors disabled:opacity-40"
+            >
+              {connecting ? "Connecting…" : "+ Relic"}
+            </button>
+            <button
+              onClick={() => setOpen(false)}
+              className="w-7 h-7 flex items-center justify-center rounded-md text-relic-parchment/40 hover:text-relic-parchment hover:bg-white/5 transition-colors"
+              aria-label="Close"
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M1 1 L11 11 M11 1 L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </button>
           </div>
-          <button
-            onClick={() => setOpen(false)}
-            className="shrink-0 w-7 h-7 flex items-center justify-center rounded-md text-relic-parchment/40 hover:text-relic-parchment hover:bg-white/5 transition-colors"
-            aria-label="Close"
-          >
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M1 1 L11 11 M11 1 L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-          </button>
         </div>
 
-        {/* Drawer body */}
-        <div className="flex-1 overflow-y-auto px-5 py-5">
-          {info?.type === "compass" ? (
-            <CompassControlPanel />
-          ) : connected ? (
-            <div className="text-center py-10 space-y-2">
-              <p className="text-sm text-relic-parchment/50">
-                No quick controls available for this device type yet.
-              </p>
-              <Link
-                to={relicRoute(info?.type ?? "")}
-                onClick={() => setOpen(false)}
-                className="btn-primary text-sm inline-block mt-2"
+        {/* Device tabs — shown when more than one device is connected */}
+        {devices.length > 1 && (
+          <div className="shrink-0 flex gap-1 px-3 pt-3 pb-0 overflow-x-auto">
+            {devices.map(d => (
+              <button
+                key={d.id}
+                onClick={() => setSelectedId(d.id)}
+                className={[
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-t-md text-xs whitespace-nowrap transition-colors border-b-2",
+                  d.id === selected?.id
+                    ? "bg-white/5 text-relic-parchment border-relic-glow/60"
+                    : "text-relic-parchment/50 hover:text-relic-parchment border-transparent",
+                ].join(" ")}
               >
-                Open full controls
-              </Link>
-            </div>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_4px_#34d399]" />
+                {d.device.name}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-5 py-5">
+          {tabDevice ? (
+            <>
+              {/* Selected device info */}
+              <div className="flex items-start justify-between mb-5 pb-4 border-b border-white/8">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399] animate-pulse shrink-0" />
+                    <p className="font-display text-sm text-relic-parchment">{tabDevice.device.name}</p>
+                  </div>
+                  <p className="flex items-center gap-1.5 text-xs text-relic-parchment/60 mt-0.5 ml-4">
+                    <BatteryIcon percent={tabDevice.battery} charging={(tabDevice.state as any)?.charging ?? false} />
+                    <span>{tabDevice.battery !== null ? `${tabDevice.battery}%` : "–"}</span>
+                    {(tabDevice.state as any)?.charging && <span className="text-amber-400">Charging</span>}
+                    <span className="text-relic-parchment/30">·</span>
+                    <span>{relicLabel(tabDevice.info.type)}</span>
+                  </p>
+                </div>
+                <button
+                  onClick={tabDevice.disconnect}
+                  className="text-[11px] text-relic-parchment/30 hover:text-relic-parchment/60 transition-colors mt-0.5"
+                >
+                  Disconnect
+                </button>
+              </div>
+              <DeviceControls device={tabDevice} />
+            </>
           ) : (
             <div className="text-center py-10 space-y-4">
               <p className="text-relic-parchment/50 text-sm leading-relaxed">
                 Bond a relic to control it while you run the adventure.
               </p>
               <button
-                onClick={() => { connect(); setOpen(false); }}
-                disabled={status === "connecting"}
+                onClick={connect}
+                disabled={connecting}
                 className="btn-primary text-sm"
               >
-                {status === "connecting" ? "Connecting…" : "Connect a relic"}
+                {connecting ? "Connecting…" : "Connect a relic"}
               </button>
             </div>
           )}
         </div>
 
         {/* Footer */}
-        {connected && info && (
+        {tabDevice && (
           <div className="shrink-0 px-5 py-3 border-t border-white/10">
             <Link
-              to={relicRoute(info.type)}
+              to={relicRoute(tabDevice.info.type)}
               onClick={() => setOpen(false)}
               className="text-xs text-relic-parchment/40 hover:text-relic-parchment/70 transition-colors"
             >
