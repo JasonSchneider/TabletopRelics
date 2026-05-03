@@ -44,6 +44,7 @@ export function Compass() {
 
   function switchTopMode(m: TopMode) {
     setTopMode(m);
+    if (!connected) return;
     if (m === "calibrate") {
       send({ op: "compass.calibrate" });
     } else {
@@ -54,6 +55,7 @@ export function Compass() {
 
   function switchEffect(e: Effect) {
     setEffect(e);
+    if (!connected) return;
     const fm = e === "static" ? "manual" : e;
     send({ op: "compass.setMode", mode: fm as any });
     if (e !== "static") {
@@ -82,7 +84,7 @@ export function Compass() {
   function handleAllLedsToggle() {
     const next = !allLeds;
     setAllLeds(next);
-    send({ op: "compass.setAll", all: next });
+    if (connected) send({ op: "compass.setAll", all: next });
   }
 
   function handleColorChange(hex: string) {
@@ -94,6 +96,7 @@ export function Compass() {
 
   function handleRandomColor(on: boolean) {
     setRandomColor(on);
+    if (!connected) return;
     if (on) {
       send({ op: "compass.setColor", random: true });
     } else {
@@ -107,10 +110,6 @@ export function Compass() {
       <header className="space-y-1">
         <p className="text-relic-rune font-display text-sm tracking-widest uppercase">Relic I</p>
         <h1 className="text-3xl sm:text-4xl">Magic Compass</h1>
-        <p className="text-relic-parchment/70 text-sm sm:text-base max-w-2xl">
-          Point the needle at any bearing, run light effects, or let it drift
-          to ambient mode. Connect a compass relic to begin.
-        </p>
         {connected && (
           <span className="flex items-center gap-1.5 text-xs text-relic-parchment/60">
             <BatteryIcon percent={battery} charging={charging} />
@@ -118,6 +117,10 @@ export function Compass() {
             {charging && <span className="text-amber-400 font-medium">· Charging</span>}
           </span>
         )}
+        <p className="text-relic-parchment/70 text-sm sm:text-base max-w-2xl">
+          Point the needle at any bearing, run light effects, or let it drift
+          to ambient mode. Connect a compass relic to send commands.
+        </p>
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[auto,1fr] items-start">
@@ -144,7 +147,7 @@ export function Compass() {
             <p className="text-xs uppercase tracking-wider text-relic-parchment/60 mb-2">Mode</p>
             <div className="flex gap-2 flex-wrap">
               {(["ambient", "manual", "quest", "calibrate"] as TopMode[]).map((m) => (
-                <button key={m} disabled={!connected} onClick={() => switchTopMode(m)}
+                <button key={m} onClick={() => switchTopMode(m)}
                   className={[
                     "px-3 py-1.5 rounded-md text-sm capitalize transition-colors",
                     topMode === m
@@ -164,7 +167,7 @@ export function Compass() {
                 <p className="text-xs uppercase tracking-wider text-relic-parchment/60 mb-2">Effect</p>
                 <div className="flex gap-2 flex-wrap">
                   {(["static", "spin", "pulse", "random"] as Effect[]).map((e) => (
-                    <button key={e} disabled={!connected} onClick={() => switchEffect(e)}
+                    <button key={e} onClick={() => switchEffect(e)}
                       className={[
                         "px-3 py-1.5 rounded-md text-sm capitalize transition-colors",
                         effect === e
@@ -201,7 +204,6 @@ export function Compass() {
                     All LEDs
                   </label>
                   <button
-                    disabled={!connected}
                     onClick={handleAllLedsToggle}
                     className={[
                       "text-xs px-3 py-1 rounded border transition-colors",
@@ -258,7 +260,6 @@ export function Compass() {
                     Color
                   </label>
                   <button
-                    disabled={!connected}
                     onClick={() => handleRandomColor(!randomColor)}
                     className={[
                       "text-xs px-2 py-0.5 rounded border transition-colors",
@@ -314,7 +315,7 @@ export function Compass() {
 
           {!connected && (
             <p className="text-sm text-relic-parchment/50">
-              Connect a compass relic from the header to enable controls.
+              Connect a compass relic to send commands to your device.
             </p>
           )}
         </div>

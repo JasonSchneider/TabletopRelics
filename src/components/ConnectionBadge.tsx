@@ -1,9 +1,7 @@
 import { useBle } from "../ble/useBle";
-import { BatteryIcon } from "./BatteryIcon";
 
 export function ConnectionBadge() {
-  const { supported, status, device, battery, state, connect, disconnect } = useBle();
-  const charging = state?.charging ?? false;
+  const { supported, status, device, connect, disconnect } = useBle();
 
   if (!supported) {
     return (
@@ -23,14 +21,6 @@ export function ConnectionBadge() {
         <span className="hidden sm:flex items-center gap-1.5 text-xs text-relic-parchment/70">
           <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399] animate-pulse" />
           {device.name}
-        </span>
-        {/* Battery — always visible once connected */}
-        <span className="flex items-center gap-1 text-xs text-relic-parchment/60">
-          <BatteryIcon percent={battery} charging={charging} />
-          <span>{battery !== null ? `${battery}%` : "–"}</span>
-          {charging && (
-            <span className="text-amber-400 text-[10px] font-medium">Charging</span>
-          )}
         </span>
         <button onClick={disconnect} className="btn-ghost text-xs px-2 py-1">
           Disconnect
