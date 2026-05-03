@@ -116,17 +116,40 @@ export function BleProvider({ children }: { children: ReactNode }) {
     }
   }, [connectBleDevice]);
 
-  // On mount: silently reconnect any previously authorized relics.
-  // getKnownRelics() does not require a user gesture.
+  // On mount: reconnect any previously authorized relics.
+  // Shows connecting state and retries with backoff — the device needs a moment
+  // to restart advertising after the previous page's GATT connection dropped.
   useEffect(() => {
     if (!supported) return;
     let cancelled = false;
-    getKnownRelics().then(async relics => {
+
+    async function autoReconnect() {
+      const relics = await getKnownRelics();
+      if (!relics.length || cancelled) return;
+
+      setConnecting(true);
+      // Give the device ~800 ms to tear down the old connection and resume advertising.
+      await new Promise(r => setTimeout(r, 800));
+
       for (const ble of relics) {
-        if (cancelled) break;
-        try { await connectBleDevice(ble); } catch { /* device not in range */ }
+        // Retry up to 4 times (at 0, 2, 4, 6 s) per device.
+        for (let attempt = 0; attempt < 4; attempt++) {
+          if (cancelled) break;
+          try {
+            await connectBleDevice(ble);
+            break;
+          } catch {
+            if (attempt < 3 && !cancelled) {
+              await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
+            }
+          }
+        }
       }
-    });
+
+      if (!cancelled) setConnecting(false);
+    }
+
+    autoReconnect();
     return () => { cancelled = true; };
   }, [supported, connectBleDevice]);
 
