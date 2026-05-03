@@ -200,6 +200,23 @@ export async function requestRelic(): Promise<BleDevice> {
   return new BleDevice(device);
 }
 
+/**
+ * Return BleDevice wrappers for all Tabletop Relics devices the browser has
+ * previously been granted permission to access. Does not require a user
+ * gesture. Returns an empty array if the API is unavailable or no devices
+ * are known.
+ */
+export async function getKnownRelics(): Promise<BleDevice[]> {
+  const bt = navigator.bluetooth as Bluetooth & { getDevices?: () => Promise<BluetoothDevice[]> };
+  if (!bt?.getDevices) return [];
+  try {
+    const devices = await bt.getDevices();
+    return devices.map(d => new BleDevice(d));
+  } catch {
+    return [];
+  }
+}
+
 export function isWebBluetoothSupported(): boolean {
   return (
     typeof navigator !== "undefined" &&
