@@ -33,6 +33,7 @@ export class BleDevice {
   private stateListeners = new Set<Listener<RelicState>>();
   private telemetryListeners = new Set<Listener<Telemetry>>();
   private batteryListeners = new Set<Listener<number>>();
+  private lastBattery: number | null = null;
 
   info: DeviceInfo | null = null;
 
@@ -94,6 +95,7 @@ export class BleDevice {
       const batteryValue = await battery.readValue().catch(() => null);
       if (batteryValue && batteryValue.byteLength >= 1) {
         const percent = batteryValue.getUint8(0);
+        this.lastBattery = percent;
         this.batteryListeners.forEach((l) => l(percent));
       }
       await battery.startNotifications().catch(() => {
@@ -148,6 +150,7 @@ export class BleDevice {
 
   onBattery(listener: Listener<number>): () => void {
     this.batteryListeners.add(listener);
+    if (this.lastBattery !== null) listener(this.lastBattery);
     return () => this.batteryListeners.delete(listener);
   }
 
@@ -172,6 +175,7 @@ export class BleDevice {
     const value = target.value;
     if (value && value.byteLength >= 1) {
       const percent = value.getUint8(0);
+      this.lastBattery = percent;
       this.batteryListeners.forEach((l) => l(percent));
     }
   };

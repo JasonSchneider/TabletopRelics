@@ -111,10 +111,10 @@ export function Compass() {
           Point the needle at any bearing, run light effects, or let it drift
           to ambient mode. Connect a compass relic to begin.
         </p>
-        {battery !== null && (
+        {connected && (
           <span className="flex items-center gap-1.5 text-xs text-relic-parchment/60">
             <BatteryIcon percent={battery} charging={charging} />
-            <span>{battery}%</span>
+            <span>{battery !== null ? `${battery}%` : "–"}</span>
             {charging && <span className="text-amber-400 font-medium">· Charging</span>}
           </span>
         )}
