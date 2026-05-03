@@ -13,10 +13,25 @@ import type { DeviceInfo, RelicCommand, RelicState } from "./protocol";
 
 type ConnectionStatus = "idle" | "connecting" | "connected" | "error";
 
+/** A single connected device with its own state, battery, and send functions. */
+export interface DeviceView {
+  id: string;
+  device: BleDevice;
+  info: DeviceInfo;
+  state: RelicState | null;
+  battery: number | null;
+  send: (cmd: RelicCommand) => Promise<void>;
+  sendFast: (cmd: RelicCommand) => void;
+  disconnect: () => void;
+}
+
 interface BleContextValue {
   supported: boolean;
   status: ConnectionStatus;
   error: string | null;
+  /** All currently connected devices. */
+  devices: DeviceView[];
+  // Backward-compat shortcuts — point to the first connected device.
   device: BleDevice | null;
   info: DeviceInfo | null;
   state: RelicState | null;
@@ -29,92 +44,136 @@ interface BleContextValue {
 
 const BleContext = createContext<BleContextValue | null>(null);
 
+interface DeviceEntry {
+  id: string;
+  device: BleDevice;
+  info: DeviceInfo;
+}
+
 export function BleProvider({ children }: { children: ReactNode }) {
   const supported = useMemo(() => isWebBluetoothSupported(), []);
-  const [status, setStatus] = useState<ConnectionStatus>("idle");
+
+  const [entries, setEntries] = useState<DeviceEntry[]>([]);
+  const [deviceStates, setDeviceStates] = useState<Record<string, RelicState>>({});
+  const [deviceBatteries, setDeviceBatteries] = useState<Record<string, number | null>>({});
+  const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [device, setDevice] = useState<BleDevice | null>(null);
-  const [info, setInfo] = useState<DeviceInfo | null>(null);
-  const [state, setState] = useState<RelicState | null>(null);
-  const [battery, setBattery] = useState<number | null>(null);
 
-  // Keep the latest device reachable from event handlers without stale closures.
-  const deviceRef = useRef<BleDevice | null>(null);
+  // All current device refs for cleanup on unmount.
+  const entriesRef = useRef<DeviceEntry[]>([]);
+  useEffect(() => { entriesRef.current = entries; }, [entries]);
 
-  const handleDisconnect = useCallback(() => {
-    setStatus("idle");
-    setDevice(null);
-    setInfo(null);
-    setState(null);
-    setBattery(null);
-    deviceRef.current = null;
+  const removeDevice = useCallback((id: string) => {
+    setEntries(prev => prev.filter(e => e.id !== id));
+    setDeviceStates(prev => { const n = { ...prev }; delete n[id]; return n; });
+    setDeviceBatteries(prev => { const n = { ...prev }; delete n[id]; return n; });
   }, []);
 
   const connect = useCallback(async () => {
     setError(null);
-    setStatus("connecting");
+    setConnecting(true);
     try {
       const ble = await requestRelic();
-      ble.nativeDevice.addEventListener("gattserverdisconnected", handleDisconnect);
+      const id = ble.id;
+
       await ble.connect();
 
-      const offState = ble.onState((s) => setState(s));
-      const offBattery = ble.onBattery((b) => setBattery(b));
+      // Register listeners AFTER connect() so lastBattery replay fires immediately.
+      const offState = ble.onState(s => {
+        setDeviceStates(prev => ({ ...prev, [id]: s }));
+      });
+      const offBattery = ble.onBattery(b => {
+        setDeviceBatteries(prev => ({ ...prev, [id]: b }));
+      });
 
-      // When the device disconnects, clean up listeners.
-      const cleanup = () => {
+      const handleDC = () => {
         offState();
         offBattery();
-        ble.nativeDevice.removeEventListener(
-          "gattserverdisconnected",
-          cleanup,
-        );
+        ble.nativeDevice.removeEventListener("gattserverdisconnected", handleDC);
+        removeDevice(id);
       };
-      ble.nativeDevice.addEventListener("gattserverdisconnected", cleanup);
+      ble.nativeDevice.addEventListener("gattserverdisconnected", handleDC);
 
-      setDevice(ble);
-      setInfo(ble.info);
-      setStatus("connected");
-      deviceRef.current = ble;
+      setEntries(prev =>
+        prev.some(e => e.id === id)
+          ? prev
+          : [...prev, { id, device: ble, info: ble.info! }]
+      );
+      setConnecting(false);
     } catch (err) {
-      // The user canceling the chooser surfaces as a NotFoundError —
-      // treat that as benign and just return to idle.
       const message = err instanceof Error ? err.message : String(err);
       if (err instanceof DOMException && err.name === "NotFoundError") {
-        setStatus("idle");
+        setConnecting(false);
         return;
       }
       setError(message);
-      setStatus("error");
+      setConnecting(false);
     }
-  }, [handleDisconnect]);
+  }, [removeDevice]);
 
+  // Disconnect a specific device by id.
+  const disconnectDevice = useCallback((id: string) => {
+    const entry = entriesRef.current.find(e => e.id === id);
+    if (entry) entry.device.disconnect();
+    removeDevice(id);
+  }, [removeDevice]);
+
+  // Backward-compat: disconnect the primary device.
   const disconnect = useCallback(() => {
-    deviceRef.current?.disconnect();
-    handleDisconnect();
-  }, [handleDisconnect]);
+    const primary = entriesRef.current[0];
+    if (primary) disconnectDevice(primary.id);
+  }, [disconnectDevice]);
+
+  // Auto-disconnect all on unmount (avoids leaking connections during HMR).
+  useEffect(() => {
+    return () => {
+      for (const e of entriesRef.current) e.device.disconnect();
+    };
+  }, []);
+
+  // Build the DeviceView array — derived from entries + state maps.
+  const devices: DeviceView[] = entries.map(e => ({
+    id: e.id,
+    device: e.device,
+    info: e.info,
+    state: deviceStates[e.id] ?? null,
+    battery: deviceBatteries[e.id] ?? null,
+    send: (cmd: RelicCommand) => e.device.send(cmd),
+    sendFast: (cmd: RelicCommand) => e.device.sendFast(cmd),
+    disconnect: () => disconnectDevice(e.id),
+  }));
+
+  // Derived status.
+  const status: ConnectionStatus = connecting
+    ? "connecting"
+    : entries.length > 0
+    ? "connected"
+    : error
+    ? "error"
+    : "idle";
+
+  // Backward-compat shortcuts.
+  const primary = devices[0] ?? null;
+  const device = primary?.device ?? null;
+  const info = primary?.info ?? null;
+  const state = primary?.state ?? null;
+  const battery = primary?.battery ?? null;
 
   const send = useCallback(async (cmd: RelicCommand) => {
-    const current = deviceRef.current;
-    if (!current) throw new Error("No relic connected.");
-    await current.send(cmd);
+    const p = entriesRef.current[0];
+    if (!p) throw new Error("No relic connected.");
+    await p.device.send(cmd);
   }, []);
 
   const sendFast = useCallback((cmd: RelicCommand) => {
-    deviceRef.current?.sendFast(cmd);
-  }, []);
-
-  // Auto-disconnect on unmount to avoid leaking connections during HMR.
-  useEffect(() => {
-    return () => {
-      deviceRef.current?.disconnect();
-    };
+    entriesRef.current[0]?.device.sendFast(cmd);
   }, []);
 
   const value: BleContextValue = {
     supported,
     status,
     error,
+    devices,
     device,
     info,
     state,
@@ -130,8 +189,6 @@ export function BleProvider({ children }: { children: ReactNode }) {
 
 export function useBle(): BleContextValue {
   const ctx = useContext(BleContext);
-  if (!ctx) {
-    throw new Error("useBle must be used inside <BleProvider>.");
-  }
+  if (!ctx) throw new Error("useBle must be used inside <BleProvider>.");
   return ctx;
 }

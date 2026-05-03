@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { useBle } from "../ble/useBle";
+import type { RelicCommand } from "../ble/protocol";
 
 type TopMode = "ambient" | "quest" | "manual" | "calibrate";
 type Effect  = "static" | "spin" | "pulse" | "random";
@@ -21,10 +21,13 @@ const COLOR_PRESETS = [
   { label: "White",  hex: "#ffffff" },
 ];
 
-export function CompassControlPanel() {
-  const { status, send, sendFast } = useBle();
-  const connected = status === "connected";
+interface Props {
+  connected: boolean;
+  send: (cmd: RelicCommand) => Promise<void>;
+  sendFast: (cmd: RelicCommand) => void;
+}
 
+export function CompassControlPanel({ connected, send, sendFast }: Props) {
   const [target, setTarget]           = useState(0);
   const [color, setColor]             = useState("#00b4ff");
   const [speed, setSpeed]             = useState(50);
@@ -101,7 +104,6 @@ export function CompassControlPanel() {
   return (
     <div className="space-y-5">
 
-      {/* Top-level mode */}
       <div>
         <p className="text-xs uppercase tracking-wider text-relic-parchment/60 mb-2">Mode</p>
         <div className="flex gap-2 flex-wrap">
@@ -118,7 +120,6 @@ export function CompassControlPanel() {
         </div>
       </div>
 
-      {/* Manual controls */}
       {isManual && (
         <>
           <div>
@@ -228,7 +229,6 @@ export function CompassControlPanel() {
         </>
       )}
 
-      {/* Quest mode */}
       {topMode === "quest" && (
         <div>
           <label className="text-xs uppercase tracking-wider text-relic-parchment/60">Target bearing</label>
