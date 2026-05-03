@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { RelicCommand } from "../ble/protocol";
 
 type TopMode = "ambient" | "quest" | "manual" | "calibrate";
@@ -41,7 +41,42 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
   const [pulseSpeed, setPulseSpeed]         = useState(50);
 
   const bearingDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevConnected = useRef(false);
   const isManual = topMode === "manual";
+
+  // Push full UI state to the device on connect/reconnect.
+  function syncToDevice() {
+    sendFast({ op: "compass.setLeds", on: ledsOn });
+    if (randomColor) {
+      sendFast({ op: "compass.setColor", random: true });
+    } else {
+      const { r, g, b } = hexToRgb(color);
+      sendFast({ op: "compass.setColor", r, g, b });
+    }
+    sendFast({ op: "compass.setAll", all: allLeds });
+    sendFast({ op: "compass.setSpill", spill });
+
+    if (topMode === "ambient") {
+      sendFast({ op: "compass.setMode", mode: "ambient" });
+    } else if (topMode === "quest") {
+      sendFast({ op: "compass.setTarget", bearing: target });
+      sendFast({ op: "compass.setMode", mode: "quest" });
+    } else if (topMode === "manual" || topMode === "calibrate") {
+      // Don't re-trigger calibration on reconnect — restore manual state instead.
+      sendFast({ op: "compass.setSpinDirection", direction: spinDirection });
+      if (spinEnabled) sendFast({ op: "compass.setSpeed", speed: spinSpeed });
+      else if (pulseEnabled) sendFast({ op: "compass.setSpeed", speed: pulseSpeed });
+      sendFast({ op: "compass.setTarget", bearing: target });
+      sendFast({ op: "compass.setMode", mode: derivedManualMode(spinEnabled, pulseEnabled) });
+    }
+  }
+
+  useEffect(() => {
+    if (connected && !prevConnected.current) syncToDevice();
+    prevConnected.current = connected;
+  // syncToDevice reads state via closure — re-run only when connected flips
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connected]);
 
   /** Derive the firmware mode from current manual sub-state. */
   function manualFirmwareMode() {
