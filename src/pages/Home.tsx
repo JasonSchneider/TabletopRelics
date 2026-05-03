@@ -70,13 +70,11 @@ function DevicesRail() {
               <p className="text-xs text-relic-parchment/60">
                 {prettyRelic(info.type)} · firmware {info.fw}
               </p>
-              {battery !== null && (
-                <span className="flex items-center gap-1.5 mt-1 text-xs text-relic-parchment/60">
-                  <BatteryIcon percent={battery} charging={charging} />
-                  <span>{battery}%</span>
-                  {charging && <span className="text-amber-400 font-medium">· Charging</span>}
-                </span>
-              )}
+              <span className="flex items-center gap-1.5 mt-1 text-xs text-relic-parchment/60">
+                <BatteryIcon percent={battery} charging={charging} />
+                <span>{battery !== null ? `${battery}%` : "–"}</span>
+                {charging && <span className="text-amber-400 font-medium">· Charging</span>}
+              </span>
             </div>
           </div>
           <div className="flex gap-2">
