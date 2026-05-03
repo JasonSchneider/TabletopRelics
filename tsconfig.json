@@ -19,7 +19,7 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
 
-    "types": ["vite/client", "web-bluetooth"]
+    "types": ["vite/client", "web-bluetooth", "vite-plugin-pwa/client"]
   },
   "include": ["src", "vite.config.ts"]
 }
