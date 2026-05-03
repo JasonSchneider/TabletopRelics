@@ -4,6 +4,7 @@ import { useBle } from "../ble/useBle";
 import { getAdventures } from "../adventures";
 import { PRODUCTS, startingPrice } from "../store/products";
 import { ProductGlyph } from "../components/ProductGlyph";
+import { BatteryIcon } from "../components/BatteryIcon";
 import type { DeviceType } from "../ble/protocol";
 import type { Adventure } from "../adventures/types";
 
@@ -41,7 +42,8 @@ function Hero() {
 
 // -------------------------------------------------------- Devices rail
 function DevicesRail() {
-  const { supported, status, info, device, connect, disconnect } = useBle();
+  const { supported, status, info, device, battery, state, connect, disconnect } = useBle();
+  const charging = state?.charging ?? false;
 
   return (
     <Rail
@@ -68,6 +70,13 @@ function DevicesRail() {
               <p className="text-xs text-relic-parchment/60">
                 {prettyRelic(info.type)} · firmware {info.fw}
               </p>
+              {battery !== null && (
+                <span className="flex items-center gap-1.5 mt-1 text-xs text-relic-parchment/60">
+                  <BatteryIcon percent={battery} charging={charging} />
+                  <span>{battery}%</span>
+                  {charging && <span className="text-amber-400 font-medium">· Charging</span>}
+                </span>
+              )}
             </div>
           </div>
           <div className="flex gap-2">
