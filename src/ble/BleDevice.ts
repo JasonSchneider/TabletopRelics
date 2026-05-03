@@ -90,6 +90,12 @@ export class BleDevice {
     }
 
     if (battery) {
+      // Read current value immediately so it shows on connect without waiting for a notify.
+      const batteryValue = await battery.readValue().catch(() => null);
+      if (batteryValue && batteryValue.byteLength >= 1) {
+        const percent = batteryValue.getUint8(0);
+        this.batteryListeners.forEach((l) => l(percent));
+      }
       await battery.startNotifications().catch(() => {
         /* battery notify is optional */
       });
