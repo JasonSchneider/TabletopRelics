@@ -208,11 +208,16 @@ export async function requestRelic(): Promise<BleDevice> {
  */
 export async function getKnownRelics(): Promise<BleDevice[]> {
   const bt = navigator.bluetooth as Bluetooth & { getDevices?: () => Promise<BluetoothDevice[]> };
-  if (!bt?.getDevices) return [];
+  if (!bt?.getDevices) {
+    console.warn("[BLE] getDevices() not available in this browser");
+    return [];
+  }
   try {
     const devices = await bt.getDevices();
+    console.log(`[BLE] getDevices() → ${devices.length} device(s):`, devices.map(d => `${d.name} (${d.id})`));
     return devices.map(d => new BleDevice(d));
-  } catch {
+  } catch (err) {
+    console.warn("[BLE] getDevices() threw:", err);
     return [];
   }
 }
