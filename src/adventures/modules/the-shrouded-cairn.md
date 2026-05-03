@@ -29,7 +29,7 @@ If the party hesitates to follow it, give them a local rumor: an old woman at th
 
 ## Scene 1 — The Bluffs
 
-A path of crushed shell winds up from the village. As the party climbs, the fog refuses to lift — it parts only enough to admit them, then closes behind. The compass pulses twice, faintly, when they reach the cairn at the hill's crown. [Compass pulses faintly](action:compass.setMode?mode=pulse) [Set slow speed](action:compass.setSpeed?speed=18)
+A path of crushed shell winds up from the village. As the party climbs, the fog refuses to lift — it parts only enough to admit them, then closes behind. The compass pulses twice, faintly, when they reach the cairn at the hill's crown. [Pulses slowly](action:compass.setSpeed?speed=18|compass.setMode?mode=pulse)
 
 **The Cairn.** A waist-high spiral of mossy stones, undisturbed but for a single capstone tilted ajar. Beneath it, a narrow shaft drops straight into the earth.
 
@@ -43,7 +43,7 @@ A path of crushed shell winds up from the village. As the party climbs, the fog 
 
 The shaft descends seventy feet to a flagged hall where the air is dry and warm despite the season. Sconces are lit but burn no fuel. The compass leads the party down the left passage; the right passage leads to a flooded chamber and is a red herring, useful only for tension.
 
-*As the party descends, the compass needle swings purposefully left at every junction — switch to quest mode and point it down the correct passage.* [Point the way — left passage](action:compass.setTarget?bearing=270) [Switch to quest mode](action:compass.setMode?mode=quest)
+*As the party descends, the compass needle swings purposefully left at every junction — switch to quest mode and point it down the correct passage.* [Point left passage](action:compass.setTarget?bearing=270|compass.setMode?mode=quest)
 
 > Read aloud (when they enter the hall):
 > Your footsteps strike the stone, and somewhere far below, a single drop of water answers — once, then never again. The torches in the sconces burn straight up, untroubled by any draft, as though the air here has agreed to be still.
@@ -59,7 +59,7 @@ The compass points to a chamber whose floor is one great inlay of rune-stone. At
 > Read aloud:
 > The compass in your hand pulses, slow and steady, the way a sleeping animal breathes. The one on the plinth does nothing. Between them, the air grows briefly warm.
 
-*Trigger a slow amber pulse as they enter the reliquary.* [Slow amber pulse](action:compass.setColor?r=212&g=160&b=40) [Begin pulsing](action:compass.setMode?mode=pulse) [Set slow speed](action:compass.setSpeed?speed=15)
+*Trigger a slow amber pulse as they enter the reliquary.* [Slow amber pulse](action:compass.setColor?r=212&g=160&b=40|compass.setSpeed?speed=15|compass.setMode?mode=pulse)
 
 **The Trade.** The compass on the plinth is the *original*. The party's compass is its child — or its echo. They can:
 
@@ -75,7 +75,7 @@ Whatever the party chose, when they return to the surface, the fog has lifted an
 
 The compass is now bonded to the bearer. From here on, you can use the **`compass.setTarget`** command from the relic drawer to make the prop point wherever the story needs it to point — toward a clue, an enemy, a moral choice. The players will assume it is the compass speaking. You will know better.
 
-*Seal the moment: give the compass a warm gold glow as the party emerges into sunlight.* [Gold glow — bonded](action:compass.setColor?r=212&g=175&b=55) [Switch to manual](action:compass.setMode?mode=manual)
+*Seal the moment: give the compass a warm gold glow as the party emerges into sunlight.* [Gold glow — bonded](action:compass.setColor?r=212&g=175&b=55|compass.setMode?mode=manual)
 
 ## Adapting
 

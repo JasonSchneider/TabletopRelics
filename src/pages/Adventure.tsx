@@ -13,12 +13,11 @@ import type { DeviceType } from "../ble/protocol";
 // Action button — rendered in place of action: links in adventure markdown
 // ---------------------------------------------------------------------------
 
-function parseAction(href: string): RelicCommand | null {
-  if (!href.startsWith("action:")) return null;
-  const rest = href.slice(7);
-  const qIdx = rest.indexOf("?");
-  const op = qIdx >= 0 ? rest.slice(0, qIdx) : rest;
-  const query = qIdx >= 0 ? rest.slice(qIdx + 1) : "";
+function parseSingleAction(part: string): RelicCommand | null {
+  const qIdx = part.indexOf("?");
+  const op = qIdx >= 0 ? part.slice(0, qIdx) : part;
+  if (!op) return null;
+  const query = qIdx >= 0 ? part.slice(qIdx + 1) : "";
   const params: Record<string, string | number | boolean> = {};
   if (query) {
     for (const [k, v] of new URLSearchParams(query)) {
@@ -29,6 +28,12 @@ function parseAction(href: string): RelicCommand | null {
     }
   }
   return { op, ...params } as unknown as RelicCommand;
+}
+
+// Supports pipe-separated sequences: action:cmd1?p=v|cmd2?p=v|cmd3?p=v
+function parseActions(href: string): RelicCommand[] {
+  if (!href.startsWith("action:")) return [];
+  return href.slice(7).split("|").map(parseSingleAction).filter(Boolean) as RelicCommand[];
 }
 
 function deviceTypeForOp(op: string): DeviceType | null {
@@ -42,20 +47,20 @@ function ActionButton({ href, children }: { href: string; children: ReactNode })
   const { devices } = useBle();
   const [flash, setFlash] = useState(false);
 
-  const cmd = useMemo(() => parseAction(href), [href]);
-  const targetType = cmd ? deviceTypeForOp(cmd.op) : null;
+  const cmds = useMemo(() => parseActions(href), [href]);
+  // Determine target device type from the first device-specific command.
+  const targetType = cmds.map(c => deviceTypeForOp(c.op)).find(t => t !== null) ?? null;
 
-  // Find the right device for this command's type, fall back to any device.
   const target = targetType
     ? (devices.find(d => d.info.type === targetType) ?? null)
     : (devices[0] ?? null);
 
-  const canFire = !!target && !!cmd;
+  const canFire = !!target && cmds.length > 0;
 
   async function handleClick() {
     if (!canFire) return;
     try {
-      await target.send(cmd!);
+      for (const cmd of cmds) await target.send(cmd);
       setFlash(true);
       setTimeout(() => setFlash(false), 1200);
     } catch {}
