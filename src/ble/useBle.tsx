@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { BleDevice, isWebBluetoothSupported, requestRelic } from "./BleDevice";
+import { BleDevice, getKnownRelics, isWebBluetoothSupported, requestRelic } from "./BleDevice";
 import type { DeviceInfo, RelicCommand, RelicState } from "./protocol";
 
 type ConnectionStatus = "idle" | "connecting" | "connected" | "error";
@@ -69,47 +69,66 @@ export function BleProvider({ children }: { children: ReactNode }) {
     setDeviceBatteries(prev => { const n = { ...prev }; delete n[id]; return n; });
   }, []);
 
+  // Core wiring: connect a BleDevice and register all listeners/cleanup.
+  // Does NOT manage `connecting` state — callers handle that.
+  const connectBleDevice = useCallback(async (ble: BleDevice) => {
+    const id = ble.id;
+    if (entriesRef.current.some(e => e.id === id)) return;
+
+    await ble.connect();
+
+    // Register listeners AFTER connect() so lastBattery replay fires immediately.
+    const offState = ble.onState(s =>
+      setDeviceStates(prev => ({ ...prev, [id]: s }))
+    );
+    const offBattery = ble.onBattery(b =>
+      setDeviceBatteries(prev => ({ ...prev, [id]: b }))
+    );
+
+    const handleDC = () => {
+      offState();
+      offBattery();
+      ble.nativeDevice.removeEventListener("gattserverdisconnected", handleDC);
+      removeDevice(id);
+    };
+    ble.nativeDevice.addEventListener("gattserverdisconnected", handleDC);
+
+    setEntries(prev =>
+      prev.some(e => e.id === id)
+        ? prev
+        : [...prev, { id, device: ble, info: ble.info! }]
+    );
+  }, [removeDevice]);
+
+  // User-triggered: show connecting state and prompt the device picker.
   const connect = useCallback(async () => {
     setError(null);
     setConnecting(true);
     try {
       const ble = await requestRelic();
-      const id = ble.id;
-
-      await ble.connect();
-
-      // Register listeners AFTER connect() so lastBattery replay fires immediately.
-      const offState = ble.onState(s => {
-        setDeviceStates(prev => ({ ...prev, [id]: s }));
-      });
-      const offBattery = ble.onBattery(b => {
-        setDeviceBatteries(prev => ({ ...prev, [id]: b }));
-      });
-
-      const handleDC = () => {
-        offState();
-        offBattery();
-        ble.nativeDevice.removeEventListener("gattserverdisconnected", handleDC);
-        removeDevice(id);
-      };
-      ble.nativeDevice.addEventListener("gattserverdisconnected", handleDC);
-
-      setEntries(prev =>
-        prev.some(e => e.id === id)
-          ? prev
-          : [...prev, { id, device: ble, info: ble.info! }]
-      );
-      setConnecting(false);
+      await connectBleDevice(ble);
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      if (err instanceof DOMException && err.name === "NotFoundError") {
-        setConnecting(false);
-        return;
+      if (!(err instanceof DOMException && err.name === "NotFoundError")) {
+        setError(err instanceof Error ? err.message : String(err));
       }
-      setError(message);
+    } finally {
       setConnecting(false);
     }
-  }, [removeDevice]);
+  }, [connectBleDevice]);
+
+  // On mount: silently reconnect any previously authorized relics.
+  // getKnownRelics() does not require a user gesture.
+  useEffect(() => {
+    if (!supported) return;
+    let cancelled = false;
+    getKnownRelics().then(async relics => {
+      for (const ble of relics) {
+        if (cancelled) break;
+        try { await connectBleDevice(ble); } catch { /* device not in range */ }
+      }
+    });
+    return () => { cancelled = true; };
+  }, [supported, connectBleDevice]);
 
   // Disconnect a specific device by id.
   const disconnectDevice = useCallback((id: string) => {
