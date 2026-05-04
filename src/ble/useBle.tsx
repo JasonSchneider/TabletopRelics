@@ -13,6 +13,18 @@ import type { DeviceInfo, RelicCommand, RelicState } from "./protocol";
 
 type ConnectionStatus = "idle" | "connecting" | "connected" | "error";
 
+const LAST_DEVICE_KEY = "relic:lastDevice";
+
+function saveLastDevice(name: string) {
+  try { localStorage.setItem(LAST_DEVICE_KEY, name); } catch { /* ignore */ }
+}
+function clearLastDevice() {
+  try { localStorage.removeItem(LAST_DEVICE_KEY); } catch { /* ignore */ }
+}
+function readLastDevice(): string | null {
+  try { return localStorage.getItem(LAST_DEVICE_KEY); } catch { return null; }
+}
+
 /** A single connected device with its own state, battery, and send functions. */
 export interface DeviceView {
   id: string;
@@ -36,6 +48,8 @@ interface BleContextValue {
   info: DeviceInfo | null;
   state: RelicState | null;
   battery: number | null;
+  /** Name of the last successfully connected device, persisted across page loads. */
+  lastKnownName: string | null;
   connect: () => Promise<void>;
   disconnect: () => void;
   send: (cmd: RelicCommand) => Promise<void>;
@@ -58,6 +72,7 @@ export function BleProvider({ children }: { children: ReactNode }) {
   const [deviceBatteries, setDeviceBatteries] = useState<Record<string, number | null>>({});
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastKnownName, setLastKnownName] = useState<string | null>(() => readLastDevice());
 
   // All current device refs for cleanup on unmount.
   const entriesRef = useRef<DeviceEntry[]>([]);
@@ -98,6 +113,10 @@ export function BleProvider({ children }: { children: ReactNode }) {
         ? prev
         : [...prev, { id, device: ble, info: ble.info! }]
     );
+
+    // Remember device name so the UI can offer a one-tap reconnect after refresh.
+    saveLastDevice(ble.name);
+    setLastKnownName(ble.name);
   }, [removeDevice]);
 
   // User-triggered: show connecting state and prompt the device picker.
@@ -168,9 +187,12 @@ export function BleProvider({ children }: { children: ReactNode }) {
   }, [removeDevice]);
 
   // Backward-compat: disconnect the primary device.
+  // Clears lastKnownName so the reconnect prompt doesn't reappear after an intentional disconnect.
   const disconnect = useCallback(() => {
     const primary = entriesRef.current[0];
     if (primary) disconnectDevice(primary.id);
+    clearLastDevice();
+    setLastKnownName(null);
   }, [disconnectDevice]);
 
   // Auto-disconnect all on unmount (avoids leaking connections during HMR).
@@ -227,6 +249,7 @@ export function BleProvider({ children }: { children: ReactNode }) {
     info,
     state,
     battery,
+    lastKnownName,
     connect,
     disconnect,
     send,

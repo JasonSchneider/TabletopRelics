@@ -1,7 +1,7 @@
 import { useBle } from "../ble/useBle";
 
 export function ConnectionBadge() {
-  const { supported, status, device, connect, disconnect } = useBle();
+  const { supported, status, device, lastKnownName, connect, disconnect } = useBle();
 
   if (!supported) {
     return (
@@ -26,6 +26,18 @@ export function ConnectionBadge() {
           Disconnect
         </button>
       </div>
+    );
+  }
+
+  // Show a one-tap reconnect button when we know the user's last device.
+  if (status === "idle" && lastKnownName) {
+    return (
+      <button
+        onClick={connect}
+        className="btn-primary text-xs sm:text-sm py-1.5 px-3"
+      >
+        Reconnect {lastKnownName}
+      </button>
     );
   }
 
