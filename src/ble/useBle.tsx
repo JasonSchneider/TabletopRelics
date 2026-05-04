@@ -50,8 +50,6 @@ interface BleContextValue {
   battery: number | null;
   /** Name of the last successfully connected device, persisted across page loads. */
   lastKnownName: string | null;
-  /** Clear the last known device so the reconnect overlay stops showing. */
-  dismissReconnect: () => void;
   connect: () => Promise<void>;
   disconnect: () => void;
   send: (cmd: RelicCommand) => Promise<void>;
@@ -66,6 +64,9 @@ interface DeviceEntry {
   info: DeviceInfo;
 }
 
+// Exponential backoff delays for auto-reconnect (ms): ~3 min total window.
+const RECONNECT_DELAYS = [1000, 2000, 4000, 8000, 16000, 30000, 30000, 30000];
+
 export function BleProvider({ children }: { children: ReactNode }) {
   const supported = useMemo(() => isWebBluetoothSupported(), []);
 
@@ -73,12 +74,16 @@ export function BleProvider({ children }: { children: ReactNode }) {
   const [deviceStates, setDeviceStates] = useState<Record<string, RelicState>>({});
   const [deviceBatteries, setDeviceBatteries] = useState<Record<string, number | null>>({});
   const [connecting, setConnecting] = useState(false);
+  const [reconnectCount, setReconnectCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [lastKnownName, setLastKnownName] = useState<string | null>(() => readLastDevice());
 
   // All current device refs for cleanup on unmount.
   const entriesRef = useRef<DeviceEntry[]>([]);
   useEffect(() => { entriesRef.current = entries; }, [entries]);
+
+  // IDs of devices the user explicitly disconnected — skip auto-reconnect for these.
+  const cancelledReconnectsRef = useRef<Set<string>>(new Set());
 
   const removeDevice = useCallback((id: string) => {
     setEntries(prev => prev.filter(e => e.id !== id));
@@ -87,6 +92,7 @@ export function BleProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Core wiring: connect a BleDevice and register all listeners/cleanup.
+  // When the connection drops unexpectedly, automatically retries with backoff.
   // Does NOT manage `connecting` state — callers handle that.
   const connectBleDevice = useCallback(async (ble: BleDevice) => {
     const id = ble.id;
@@ -102,12 +108,38 @@ export function BleProvider({ children }: { children: ReactNode }) {
       setDeviceBatteries(prev => ({ ...prev, [id]: b }))
     );
 
-    const handleDC = () => {
+    const handleDC = async () => {
       offState();
       offBattery();
       ble.nativeDevice.removeEventListener("gattserverdisconnected", handleDC);
       removeDevice(id);
+
+      // User explicitly disconnected this device — don't auto-reconnect.
+      if (cancelledReconnectsRef.current.has(id)) return;
+
+      // Unexpected disconnect — attempt to reconnect automatically.
+      console.log(`[BLE] ${ble.name} disconnected unexpectedly, auto-reconnecting…`);
+      setReconnectCount(c => c + 1);
+      try {
+        for (const delay of RECONNECT_DELAYS) {
+          await new Promise(r => setTimeout(r, delay));
+          if (cancelledReconnectsRef.current.has(id)) return;
+          if (entriesRef.current.some(e => e.id === id)) return; // reconnected elsewhere
+          console.log(`[BLE] auto-reconnect attempt for ${ble.name}…`);
+          try {
+            await connectBleDevice(ble);
+            console.log(`[BLE] ${ble.name} reconnected ✓`);
+            return;
+          } catch (err) {
+            console.warn(`[BLE] reconnect attempt failed:`, err);
+          }
+        }
+        console.warn(`[BLE] ${ble.name} reconnect gave up after all attempts`);
+      } finally {
+        setReconnectCount(c => c - 1);
+      }
     };
+
     ble.nativeDevice.addEventListener("gattserverdisconnected", handleDC);
 
     setEntries(prev =>
@@ -116,7 +148,7 @@ export function BleProvider({ children }: { children: ReactNode }) {
         : [...prev, { id, device: ble, info: ble.info! }]
     );
 
-    // Remember device name so the UI can offer a one-tap reconnect after refresh.
+    // Remember device name so the header can offer a one-tap reconnect on page refresh.
     saveLastDevice(ble.name);
     setLastKnownName(ble.name);
   }, [removeDevice]);
@@ -127,6 +159,9 @@ export function BleProvider({ children }: { children: ReactNode }) {
     setConnecting(true);
     try {
       const ble = await requestRelic();
+      // Clear any cancelled flag in case the user is reconnecting a previously
+      // disconnected device.
+      cancelledReconnectsRef.current.delete(ble.id);
       await connectBleDevice(ble);
     } catch (err) {
       if (!(err instanceof DOMException && err.name === "NotFoundError")) {
@@ -137,9 +172,8 @@ export function BleProvider({ children }: { children: ReactNode }) {
     }
   }, [connectBleDevice]);
 
-  // On mount: reconnect any previously authorized relics.
-  // Shows connecting state and retries with backoff — the device needs a moment
-  // to restart advertising after the previous page's GATT connection dropped.
+  // On mount: reconnect any previously authorized relics via getDevices().
+  // Falls back gracefully when the API is unavailable (some browsers/versions).
   useEffect(() => {
     if (!supported) return;
     let cancelled = false;
@@ -147,7 +181,7 @@ export function BleProvider({ children }: { children: ReactNode }) {
     async function autoReconnect() {
       const relics = await getKnownRelics();
       if (!relics.length || cancelled) {
-        console.log("[BLE] auto-reconnect: no known relics, skipping");
+        console.log("[BLE] auto-reconnect: no known relics via getDevices(), skipping");
         return;
       }
 
@@ -181,27 +215,21 @@ export function BleProvider({ children }: { children: ReactNode }) {
     return () => { cancelled = true; };
   }, [supported, connectBleDevice]);
 
-  // Disconnect a specific device by id.
+  // Disconnect a specific device by id (user-initiated — cancels auto-reconnect).
   const disconnectDevice = useCallback((id: string) => {
+    cancelledReconnectsRef.current.add(id);
     const entry = entriesRef.current.find(e => e.id === id);
     if (entry) entry.device.disconnect();
     removeDevice(id);
   }, [removeDevice]);
 
   // Backward-compat: disconnect the primary device.
-  // Clears lastKnownName so the reconnect overlay doesn't reappear after an intentional disconnect.
   const disconnect = useCallback(() => {
     const primary = entriesRef.current[0];
     if (primary) disconnectDevice(primary.id);
     clearLastDevice();
     setLastKnownName(null);
   }, [disconnectDevice]);
-
-  // Let the user permanently dismiss the reconnect overlay without connecting.
-  const dismissReconnect = useCallback(() => {
-    clearLastDevice();
-    setLastKnownName(null);
-  }, []);
 
   // Auto-disconnect all on unmount (avoids leaking connections during HMR).
   useEffect(() => {
@@ -222,8 +250,8 @@ export function BleProvider({ children }: { children: ReactNode }) {
     disconnect: () => disconnectDevice(e.id),
   }));
 
-  // Derived status.
-  const status: ConnectionStatus = connecting
+  // Derived status — reconnecting counts as "connecting" so the UI reflects it.
+  const status: ConnectionStatus = (connecting || reconnectCount > 0)
     ? "connecting"
     : entries.length > 0
     ? "connected"
@@ -258,7 +286,6 @@ export function BleProvider({ children }: { children: ReactNode }) {
     state,
     battery,
     lastKnownName,
-    dismissReconnect,
     connect,
     disconnect,
     send,

@@ -2,7 +2,6 @@ import { Link, NavLink } from "react-router-dom";
 import type { ReactNode } from "react";
 import { ConnectionBadge } from "./ConnectionBadge";
 import { RelicsMenu } from "./RelicsMenu";
-import { ReconnectOverlay } from "./ReconnectOverlay";
 import { UpdateBanner } from "./UpdateBanner";
 
 interface NavItem {
@@ -60,7 +59,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         Tabletop Relics — control your enchanted props.
       </footer>
       <UpdateBanner />
-      <ReconnectOverlay />
     </div>
   );
 }
