@@ -50,6 +50,8 @@ interface BleContextValue {
   battery: number | null;
   /** Name of the last successfully connected device, persisted across page loads. */
   lastKnownName: string | null;
+  /** Clear the last known device so the reconnect overlay stops showing. */
+  dismissReconnect: () => void;
   connect: () => Promise<void>;
   disconnect: () => void;
   send: (cmd: RelicCommand) => Promise<void>;
@@ -187,13 +189,19 @@ export function BleProvider({ children }: { children: ReactNode }) {
   }, [removeDevice]);
 
   // Backward-compat: disconnect the primary device.
-  // Clears lastKnownName so the reconnect prompt doesn't reappear after an intentional disconnect.
+  // Clears lastKnownName so the reconnect overlay doesn't reappear after an intentional disconnect.
   const disconnect = useCallback(() => {
     const primary = entriesRef.current[0];
     if (primary) disconnectDevice(primary.id);
     clearLastDevice();
     setLastKnownName(null);
   }, [disconnectDevice]);
+
+  // Let the user permanently dismiss the reconnect overlay without connecting.
+  const dismissReconnect = useCallback(() => {
+    clearLastDevice();
+    setLastKnownName(null);
+  }, []);
 
   // Auto-disconnect all on unmount (avoids leaking connections during HMR).
   useEffect(() => {
@@ -250,6 +258,7 @@ export function BleProvider({ children }: { children: ReactNode }) {
     state,
     battery,
     lastKnownName,
+    dismissReconnect,
     connect,
     disconnect,
     send,
