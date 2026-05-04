@@ -1,7 +1,7 @@
 import { useBle } from "../ble/useBle";
 
 export function ConnectionBadge() {
-  const { supported, status, device, lastKnownName, connect, disconnect } = useBle();
+  const { supported, status, devices, connect, disconnect } = useBle();
 
   if (!supported) {
     return (
@@ -14,30 +14,21 @@ export function ConnectionBadge() {
     );
   }
 
-  if (status === "connected" && device) {
+  if (status === "connected") {
+    const count = devices.length;
     return (
       <div className="flex items-center gap-2">
-        {/* Device name — hidden on small screens to save space */}
         <span className="hidden sm:flex items-center gap-1.5 text-xs text-relic-parchment/70">
           <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399] animate-pulse" />
-          {device.name}
+          {count === 1 ? "1 Relic" : `${count} Relics`}
         </span>
+        <button onClick={connect} className="btn-ghost text-xs px-2 py-1">
+          + Add
+        </button>
         <button onClick={disconnect} className="btn-ghost text-xs px-2 py-1">
           Disconnect
         </button>
       </div>
-    );
-  }
-
-  // Show a one-tap reconnect button when we know the user's last device.
-  if (status === "idle" && lastKnownName) {
-    return (
-      <button
-        onClick={connect}
-        className="btn-primary text-xs sm:text-sm py-1.5 px-3"
-      >
-        Reconnect {lastKnownName}
-      </button>
     );
   }
 
