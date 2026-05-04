@@ -238,6 +238,18 @@ export function BleProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // Warn before page refresh/close when a relic is connected.
+  useEffect(() => {
+    if (entries.length === 0) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      // Chrome requires returnValue to be set to trigger the dialog.
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [entries.length]);
+
   // Build the DeviceView array — derived from entries + state maps.
   const devices: DeviceView[] = entries.map(e => ({
     id: e.id,
