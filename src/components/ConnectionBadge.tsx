@@ -1,7 +1,7 @@
 import { useBle } from "../ble/useBle";
 
 export function ConnectionBadge() {
-  const { supported, status, devices, connect, disconnect } = useBle();
+  const { supported, status, devices, connect } = useBle();
 
   if (!supported) {
     return (
@@ -24,9 +24,6 @@ export function ConnectionBadge() {
         </span>
         <button onClick={connect} className="btn-ghost text-xs px-2 py-1">
           + Add
-        </button>
-        <button onClick={disconnect} className="btn-ghost text-xs px-2 py-1">
-          Disconnect
         </button>
       </div>
     );
