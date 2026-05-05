@@ -299,6 +299,8 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
       {/* ── Compass mode ── */}
       {isCompass && (
         <>
+          <ColorPicker />
+
           {/* Real north / Custom bearing */}
           <div>
             <p className="text-xs uppercase tracking-wider text-relic-parchment/60 mb-2">Direction</p>
@@ -358,13 +360,14 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
             </div>
           </div>
 
-          <ColorPicker />
         </>
       )}
 
       {/* ── Manual mode ── */}
       {isManual && (
         <>
+          <ColorPicker />
+
           {/* Bearing */}
           <div className={allLeds ? "opacity-40 pointer-events-none" : ""}>
             <label className="text-xs uppercase tracking-wider text-relic-parchment/60">Bearing</label>
@@ -490,8 +493,6 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
               </div>
             </div>
           </div>
-
-          <ColorPicker />
         </>
       )}
 
