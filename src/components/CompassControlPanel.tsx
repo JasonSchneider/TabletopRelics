@@ -345,20 +345,18 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
             </div>
           </div>
 
-          {spread > 0 && (
-            <div>
-              <label className="text-xs uppercase tracking-wider text-relic-parchment/60">Spread Intensity</label>
-              <input type="range" min={10} max={100} step={5} value={spreadIntensity}
-                onChange={(e) => handleSpreadIntensityChange(Number(e.target.value))}
-                className="w-full mt-2 accent-relic-glow"
-              />
-              <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
-                <span>Dim</span>
-                <span className="text-relic-rune font-display text-base">{spreadIntensity}%</span>
-                <span>Bright</span>
-              </div>
+          <div>
+            <label className="text-xs uppercase tracking-wider text-relic-parchment/60">Spread Intensity</label>
+            <input type="range" min={10} max={100} step={5} value={spreadIntensity}
+              onChange={(e) => handleSpreadIntensityChange(Number(e.target.value))}
+              className="w-full mt-2 accent-relic-glow"
+            />
+            <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
+              <span>Dim</span>
+              <span className="text-relic-rune font-display text-base">{spreadIntensity}%</span>
+              <span>Bright</span>
             </div>
-          )}
+          </div>
 
           <ColorPicker />
         </>
@@ -409,20 +407,18 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
                 </div>
               </div>
 
-              {spread > 0 && (
-                <div>
-                  <label className="text-xs uppercase tracking-wider text-relic-parchment/60">Spread Intensity</label>
-                  <input type="range" min={10} max={100} step={5} value={spreadIntensity}
-                    onChange={(e) => handleSpreadIntensityChange(Number(e.target.value))}
-                    className="w-full mt-2 accent-relic-glow"
-                  />
-                  <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
-                    <span>Dim</span>
-                    <span className="text-relic-rune font-display text-base">{spreadIntensity}%</span>
-                    <span>Bright</span>
-                  </div>
+              <div>
+                <label className="text-xs uppercase tracking-wider text-relic-parchment/60">Spread Intensity</label>
+                <input type="range" min={10} max={100} step={5} value={spreadIntensity}
+                  onChange={(e) => handleSpreadIntensityChange(Number(e.target.value))}
+                  className="w-full mt-2 accent-relic-glow"
+                />
+                <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
+                  <span>Dim</span>
+                  <span className="text-relic-rune font-display text-base">{spreadIntensity}%</span>
+                  <span>Bright</span>
                 </div>
-              )}
+              </div>
             </div>
           )}
 
