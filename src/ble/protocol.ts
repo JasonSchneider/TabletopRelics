@@ -57,6 +57,7 @@ export type RelicCommand =
   | { op: "compass.setLeds"; on: boolean }
   | { op: "compass.setSpinDirection"; direction: "cw" | "ccw" }
   | { op: "compass.setBrightness"; brightness: number /* 0–100 % */ }
+  | { op: "compass.setSpreadIntensity"; intensity: number /* 0–100 % */ }
   | { op: "compass.calibrate" }
   | { op: "compass.setMode"; mode: "ambient" | "quest" | "manual" | "spin" | "pulse" | "spin-pulse" | "random" | "off" }
 
