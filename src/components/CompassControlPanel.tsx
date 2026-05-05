@@ -33,7 +33,7 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
   const [ledsOn, setLedsOn]                 = useState(true);
   const [target, setTarget]                 = useState(0);
   const [color, setColor]                   = useState("#00b4ff");
-  const [spill, setSpill]                   = useState(0);
+  const [spread, setSpread]                 = useState(0);
   const [allLeds, setAllLeds]               = useState(false);
   const [randomColor, setRandomColor]       = useState(false);
   const [spinEnabled, setSpinEnabled]       = useState(false);
@@ -57,7 +57,7 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
       sendFast({ op: "compass.setColor", r, g, b });
     }
     sendFast({ op: "compass.setAll", all: allLeds });
-    sendFast({ op: "compass.setSpill", spill });
+    sendFast({ op: "compass.setSpill", spill: spread });
 
     if (topMode === "compass") {
       if (compassSubMode === "real") {
@@ -100,7 +100,7 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
     } else if (m === "compass") {
       if (randomColor) sendFast({ op: "compass.setColor", random: true });
       else { const { r, g, b } = hexToRgb(color); sendFast({ op: "compass.setColor", r, g, b }); }
-      sendFast({ op: "compass.setSpill", spill });
+      sendFast({ op: "compass.setSpill", spill: spread });
       if (compassSubMode === "real") {
         send({ op: "compass.setMode", mode: "ambient" });
       } else {
@@ -143,8 +143,8 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
     if (connected) send({ op: "compass.setAll", all: next });
   }
 
-  function handleSpillChange(value: number) {
-    setSpill(value);
+  function handleSpreadChange(value: number) {
+    setSpread(value);
     sendFast({ op: "compass.setSpill", spill: value });
   }
 
@@ -303,16 +303,16 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
             </div>
           )}
 
-          {/* Spill */}
+          {/* Spread */}
           <div>
-            <label className="text-xs uppercase tracking-wider text-relic-parchment/60">Spill</label>
-            <input type="range" min={0} max={4} step={1} value={spill}
-              onChange={(e) => handleSpillChange(Number(e.target.value))}
+            <label className="text-xs uppercase tracking-wider text-relic-parchment/60">Spread</label>
+            <input type="range" min={0} max={4} step={1} value={spread}
+              onChange={(e) => handleSpreadChange(Number(e.target.value))}
               className="w-full mt-2 accent-relic-glow"
             />
             <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
               <span>None</span>
-              <span className="text-relic-rune font-display text-base">{spill}</span>
+              <span className="text-relic-rune font-display text-base">{spread}</span>
               <span>Wide</span>
             </div>
           </div>
@@ -353,14 +353,14 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
 
           {!allLeds && (
             <div>
-              <label className="text-xs uppercase tracking-wider text-relic-parchment/60">Spill</label>
-              <input type="range" min={0} max={4} step={1} value={spill}
-                onChange={(e) => handleSpillChange(Number(e.target.value))}
+              <label className="text-xs uppercase tracking-wider text-relic-parchment/60">Spread</label>
+              <input type="range" min={0} max={4} step={1} value={spread}
+                onChange={(e) => handleSpreadChange(Number(e.target.value))}
                 className="w-full mt-2 accent-relic-glow"
               />
               <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
                 <span>None</span>
-                <span className="text-relic-rune font-display text-base">{spill}</span>
+                <span className="text-relic-rune font-display text-base">{spread}</span>
                 <span>Wide</span>
               </div>
             </div>
