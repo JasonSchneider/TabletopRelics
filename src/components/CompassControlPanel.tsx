@@ -33,6 +33,7 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
   const [ledsOn, setLedsOn]                 = useState(true);
   const [target, setTarget]                 = useState(0);
   const [color, setColor]                   = useState("#00b4ff");
+  const [brightness, setBrightness]         = useState(78);
   const [spread, setSpread]                 = useState(0);
   const [allLeds, setAllLeds]               = useState(false);
   const [randomColor, setRandomColor]       = useState(false);
@@ -49,6 +50,7 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
 
   // Push full UI state to the device on connect/reconnect.
   function syncToDevice() {
+    sendFast({ op: "compass.setBrightness", brightness });
     sendFast({ op: "compass.setLeds", on: ledsOn });
     if (randomColor) {
       sendFast({ op: "compass.setColor", random: true });
@@ -121,6 +123,11 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
       sendFast({ op: "compass.setTarget", bearing: target });
       send({ op: "compass.setMode", mode: "quest" });
     }
+  }
+
+  function handleBrightnessChange(value: number) {
+    setBrightness(value);
+    sendFast({ op: "compass.setBrightness", brightness: value });
   }
 
   function handleLedsToggle() {
@@ -249,6 +256,20 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
               : "bg-white/5 border-white/10 text-relic-parchment/50 hover:text-relic-parchment",
           ].join(" ")}
         >{ledsOn ? "On" : "Off"}</button>
+      </div>
+
+      {/* Brightness — always visible, caps all LED output */}
+      <div>
+        <label className="text-xs uppercase tracking-wider text-relic-parchment/60">Brightness</label>
+        <input type="range" min={0} max={100} value={brightness}
+          onChange={(e) => handleBrightnessChange(Number(e.target.value))}
+          className="w-full mt-2 accent-relic-glow"
+        />
+        <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
+          <span>Off</span>
+          <span className="text-relic-rune font-display text-base">{brightness}%</span>
+          <span>Full</span>
+        </div>
       </div>
 
       {/* Mode */}
