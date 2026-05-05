@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { BleDevice, getKnownRelics, isWebBluetoothSupported, requestRelic } from "./BleDevice";
+import { BleDevice, isWebBluetoothSupported, requestRelic } from "./BleDevice";
 import type { DeviceInfo, RelicCommand, RelicState } from "./protocol";
 
 type ConnectionStatus = "idle" | "connecting" | "connected" | "error";
@@ -171,49 +171,6 @@ export function BleProvider({ children }: { children: ReactNode }) {
       setConnecting(false);
     }
   }, [connectBleDevice]);
-
-  // On mount: reconnect any previously authorized relics via getDevices().
-  // Falls back gracefully when the API is unavailable (some browsers/versions).
-  useEffect(() => {
-    if (!supported) return;
-    let cancelled = false;
-
-    async function autoReconnect() {
-      const relics = await getKnownRelics();
-      if (!relics.length || cancelled) {
-        console.log("[BLE] auto-reconnect: no known relics via getDevices(), skipping");
-        return;
-      }
-
-      console.log(`[BLE] auto-reconnect: attempting ${relics.length} device(s)`);
-      setConnecting(true);
-      // Give the device ~800 ms to tear down the old connection and resume advertising.
-      await new Promise(r => setTimeout(r, 800));
-
-      for (const ble of relics) {
-        // Retry up to 4 times (at 0, 2, 4, 6 s) per device.
-        for (let attempt = 0; attempt < 4; attempt++) {
-          if (cancelled) break;
-          console.log(`[BLE] auto-reconnect: ${ble.name} attempt ${attempt + 1}/4`);
-          try {
-            await connectBleDevice(ble);
-            console.log(`[BLE] auto-reconnect: ${ble.name} connected ✓`);
-            break;
-          } catch (err) {
-            console.warn(`[BLE] auto-reconnect: ${ble.name} attempt ${attempt + 1} failed:`, err);
-            if (attempt < 3 && !cancelled) {
-              await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
-            }
-          }
-        }
-      }
-
-      if (!cancelled) setConnecting(false);
-    }
-
-    autoReconnect();
-    return () => { cancelled = true; };
-  }, [supported, connectBleDevice]);
 
   // Disconnect a specific device by id (user-initiated — cancels auto-reconnect).
   const disconnectDevice = useCallback((id: string) => {
