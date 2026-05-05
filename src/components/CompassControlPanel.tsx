@@ -35,6 +35,7 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
   const [color, setColor]                   = useState("#00b4ff");
   const [brightness, setBrightness]         = useState(78);
   const [spread, setSpread]                 = useState(0);
+  const [spreadIntensity, setSpreadIntensity] = useState(50);
   const [allLeds, setAllLeds]               = useState(false);
   const [randomColor, setRandomColor]       = useState(false);
   const [spinEnabled, setSpinEnabled]       = useState(false);
@@ -51,6 +52,7 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
   // Push full UI state to the device on connect/reconnect.
   function syncToDevice() {
     sendFast({ op: "compass.setBrightness", brightness });
+    sendFast({ op: "compass.setSpreadIntensity", intensity: spreadIntensity });
     sendFast({ op: "compass.setLeds", on: ledsOn });
     if (randomColor) {
       sendFast({ op: "compass.setColor", random: true });
@@ -153,6 +155,11 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
   function handleSpreadChange(value: number) {
     setSpread(value);
     sendFast({ op: "compass.setSpill", spill: value });
+  }
+
+  function handleSpreadIntensityChange(value: number) {
+    setSpreadIntensity(value);
+    sendFast({ op: "compass.setSpreadIntensity", intensity: value });
   }
 
   function handleColorChange(hex: string) {
@@ -338,6 +345,21 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
             </div>
           </div>
 
+          {spread > 0 && (
+            <div>
+              <label className="text-xs uppercase tracking-wider text-relic-parchment/60">Spread Intensity</label>
+              <input type="range" min={10} max={100} step={5} value={spreadIntensity}
+                onChange={(e) => handleSpreadIntensityChange(Number(e.target.value))}
+                className="w-full mt-2 accent-relic-glow"
+              />
+              <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
+                <span>Dim</span>
+                <span className="text-relic-rune font-display text-base">{spreadIntensity}%</span>
+                <span>Bright</span>
+              </div>
+            </div>
+          )}
+
           <ColorPicker />
         </>
       )}
@@ -373,17 +395,34 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
           </div>
 
           {!allLeds && (
-            <div>
-              <label className="text-xs uppercase tracking-wider text-relic-parchment/60">Spread</label>
-              <input type="range" min={0} max={4} step={1} value={spread}
-                onChange={(e) => handleSpreadChange(Number(e.target.value))}
-                className="w-full mt-2 accent-relic-glow"
-              />
-              <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
-                <span>None</span>
-                <span className="text-relic-rune font-display text-base">{spread}</span>
-                <span>Wide</span>
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs uppercase tracking-wider text-relic-parchment/60">Spread</label>
+                <input type="range" min={0} max={4} step={1} value={spread}
+                  onChange={(e) => handleSpreadChange(Number(e.target.value))}
+                  className="w-full mt-2 accent-relic-glow"
+                />
+                <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
+                  <span>None</span>
+                  <span className="text-relic-rune font-display text-base">{spread}</span>
+                  <span>Wide</span>
+                </div>
               </div>
+
+              {spread > 0 && (
+                <div>
+                  <label className="text-xs uppercase tracking-wider text-relic-parchment/60">Spread Intensity</label>
+                  <input type="range" min={10} max={100} step={5} value={spreadIntensity}
+                    onChange={(e) => handleSpreadIntensityChange(Number(e.target.value))}
+                    className="w-full mt-2 accent-relic-glow"
+                  />
+                  <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
+                    <span>Dim</span>
+                    <span className="text-relic-rune font-display text-base">{spreadIntensity}%</span>
+                    <span>Bright</span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
