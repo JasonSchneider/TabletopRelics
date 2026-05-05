@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { RelicCommand } from "../ble/protocol";
 
-type TopMode = "ambient" | "quest" | "manual" | "calibrate";
+type TopMode = "compass" | "manual" | "calibrate";
+type CompassSubMode = "real" | "custom";
 
 function hexToRgb(hex: string) {
   return {
@@ -27,7 +28,8 @@ interface Props {
 }
 
 export function CompassControlPanel({ connected, send, sendFast }: Props) {
-  const [topMode, setTopMode]               = useState<TopMode>("ambient");
+  const [topMode, setTopMode]               = useState<TopMode>("compass");
+  const [compassSubMode, setCompassSubMode] = useState<CompassSubMode>("real");
   const [ledsOn, setLedsOn]                 = useState(true);
   const [target, setTarget]                 = useState(0);
   const [color, setColor]                   = useState("#00b4ff");
@@ -43,6 +45,7 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
   const bearingDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevConnected = useRef(false);
   const isManual = topMode === "manual";
+  const isCompass = topMode === "compass";
 
   // Push full UI state to the device on connect/reconnect.
   function syncToDevice() {
@@ -56,13 +59,14 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
     sendFast({ op: "compass.setAll", all: allLeds });
     sendFast({ op: "compass.setSpill", spill });
 
-    if (topMode === "ambient") {
-      sendFast({ op: "compass.setMode", mode: "ambient" });
-    } else if (topMode === "quest") {
-      sendFast({ op: "compass.setTarget", bearing: target });
-      sendFast({ op: "compass.setMode", mode: "quest" });
+    if (topMode === "compass") {
+      if (compassSubMode === "real") {
+        sendFast({ op: "compass.setMode", mode: "ambient" });
+      } else {
+        sendFast({ op: "compass.setTarget", bearing: target });
+        sendFast({ op: "compass.setMode", mode: "quest" });
+      }
     } else if (topMode === "manual" || topMode === "calibrate") {
-      // Don't re-trigger calibration on reconnect — restore manual state instead.
       sendFast({ op: "compass.setSpinDirection", direction: spinDirection });
       if (spinEnabled) sendFast({ op: "compass.setSpeed", speed: spinSpeed });
       else if (pulseEnabled) sendFast({ op: "compass.setSpeed", speed: pulseSpeed });
@@ -74,15 +78,18 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
   useEffect(() => {
     if (connected && !prevConnected.current) syncToDevice();
     prevConnected.current = connected;
-  // syncToDevice reads state via closure — re-run only when connected flips
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connected]);
 
-  /** Derive the firmware mode from current manual sub-state. */
+  function derivedManualMode(spin: boolean, pulse: boolean) {
+    if (spin && pulse) return "spin-pulse" as const;
+    if (spin) return "spin" as const;
+    if (pulse) return "pulse" as const;
+    return "manual" as const;
+  }
+
   function manualFirmwareMode() {
-    if (spinEnabled) return "spin";
-    if (pulseEnabled) return "pulse";
-    return "manual";
+    return derivedManualMode(spinEnabled, pulseEnabled);
   }
 
   function switchTopMode(m: TopMode) {
@@ -90,10 +97,29 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
     if (!connected) return;
     if (m === "calibrate") {
       send({ op: "compass.calibrate" });
+    } else if (m === "compass") {
+      if (randomColor) sendFast({ op: "compass.setColor", random: true });
+      else { const { r, g, b } = hexToRgb(color); sendFast({ op: "compass.setColor", r, g, b }); }
+      sendFast({ op: "compass.setSpill", spill });
+      if (compassSubMode === "real") {
+        send({ op: "compass.setMode", mode: "ambient" });
+      } else {
+        sendFast({ op: "compass.setTarget", bearing: target });
+        send({ op: "compass.setMode", mode: "quest" });
+      }
     } else if (m === "manual") {
       send({ op: "compass.setMode", mode: manualFirmwareMode() });
+    }
+  }
+
+  function handleCompassSubMode(sub: CompassSubMode) {
+    setCompassSubMode(sub);
+    if (!connected) return;
+    if (sub === "real") {
+      send({ op: "compass.setMode", mode: "ambient" });
     } else {
-      send({ op: "compass.setMode", mode: m });
+      sendFast({ op: "compass.setTarget", bearing: target });
+      send({ op: "compass.setMode", mode: "quest" });
     }
   }
 
@@ -140,13 +166,6 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
     }
   }
 
-  function derivedManualMode(spin: boolean, pulse: boolean) {
-    if (spin && pulse) return "spin-pulse" as const;
-    if (spin) return "spin" as const;
-    if (pulse) return "pulse" as const;
-    return "manual" as const;
-  }
-
   function handleSpinToggle() {
     const next = !spinEnabled;
     setSpinEnabled(next);
@@ -183,6 +202,39 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
     if (pulseEnabled) sendFast({ op: "compass.setSpeed", speed: value });
   }
 
+  // Shared color picker block used in both compass and manual modes.
+  function ColorPicker() {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-xs uppercase tracking-wider text-relic-parchment/60">Color</label>
+          <button onClick={() => handleRandomColor(!randomColor)}
+            className={[
+              "text-xs px-2 py-0.5 rounded border transition-colors",
+              randomColor
+                ? "bg-relic-rune/30 border-relic-rune/60 text-relic-parchment"
+                : "bg-white/5 border-white/10 text-relic-parchment/50 hover:text-relic-parchment",
+            ].join(" ")}
+          >🎲 Random</button>
+        </div>
+        <div className={`flex items-center gap-3 transition-opacity ${randomColor ? "opacity-30 pointer-events-none" : ""}`}>
+          <input type="color" value={color}
+            onChange={(e) => handleColorChange(e.target.value)}
+            className="w-10 h-10 rounded cursor-pointer bg-transparent border-0"
+          />
+          <div className="flex gap-2 flex-wrap">
+            {COLOR_PRESETS.map(({ label, hex }) => (
+              <button key={hex} onClick={() => handleColorChange(hex)} title={label}
+                className="w-6 h-6 rounded-full border-2 transition-transform hover:scale-110"
+                style={{ backgroundColor: hex, borderColor: color === hex && !randomColor ? "#fff" : "transparent" }}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
 
@@ -203,7 +255,7 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
       <div>
         <p className="text-xs uppercase tracking-wider text-relic-parchment/60 mb-2">Mode</p>
         <div className="flex gap-2 flex-wrap">
-          {(["ambient", "manual", "quest", "calibrate"] as TopMode[]).map((m) => (
+          {(["compass", "manual", "calibrate"] as TopMode[]).map((m) => (
             <button key={m} onClick={() => switchTopMode(m)}
               className={[
                 "px-3 py-1.5 rounded-md text-sm capitalize transition-colors",
@@ -216,6 +268,60 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
         </div>
       </div>
 
+      {/* ── Compass mode ── */}
+      {isCompass && (
+        <>
+          {/* Real north / Custom bearing */}
+          <div>
+            <p className="text-xs uppercase tracking-wider text-relic-parchment/60 mb-2">Direction</p>
+            <div className="flex gap-2">
+              {(["real", "custom"] as CompassSubMode[]).map((sub) => (
+                <button key={sub} onClick={() => handleCompassSubMode(sub)}
+                  className={[
+                    "px-3 py-1.5 rounded-md text-sm transition-colors",
+                    compassSubMode === sub
+                      ? "bg-relic-glow/30 text-relic-parchment border border-relic-glow/50"
+                      : "bg-white/5 text-relic-parchment/60 hover:text-relic-parchment hover:bg-white/10 border border-white/10",
+                  ].join(" ")}
+                >{sub === "real" ? "Real north" : "Custom"}</button>
+              ))}
+            </div>
+          </div>
+
+          {compassSubMode === "custom" && (
+            <div>
+              <label className="text-xs uppercase tracking-wider text-relic-parchment/60">Bearing</label>
+              <input type="range" min={0} max={359} value={target}
+                onChange={(e) => handleBearingChange(Number(e.target.value))}
+                className="w-full mt-2 accent-relic-glow"
+              />
+              <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
+                <span>0°</span>
+                <span className="text-relic-rune font-display text-base">{target}°</span>
+                <span>359°</span>
+              </div>
+            </div>
+          )}
+
+          {/* Spill */}
+          <div>
+            <label className="text-xs uppercase tracking-wider text-relic-parchment/60">Spill</label>
+            <input type="range" min={0} max={4} step={1} value={spill}
+              onChange={(e) => handleSpillChange(Number(e.target.value))}
+              className="w-full mt-2 accent-relic-glow"
+            />
+            <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
+              <span>None</span>
+              <span className="text-relic-rune font-display text-base">{spill}</span>
+              <span>Wide</span>
+            </div>
+          </div>
+
+          <ColorPicker />
+        </>
+      )}
+
+      {/* ── Manual mode ── */}
       {isManual && (
         <>
           {/* Bearing */}
@@ -245,7 +351,6 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
             >{allLeds ? "On" : "Off"}</button>
           </div>
 
-          {/* Spill */}
           {!allLeds && (
             <div>
               <label className="text-xs uppercase tracking-wider text-relic-parchment/60">Spill</label>
@@ -330,54 +435,8 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
             </div>
           </div>
 
-          {/* Color */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-xs uppercase tracking-wider text-relic-parchment/60">Color</label>
-              <button onClick={() => handleRandomColor(!randomColor)}
-                className={[
-                  "text-xs px-2 py-0.5 rounded border transition-colors",
-                  randomColor
-                    ? "bg-relic-rune/30 border-relic-rune/60 text-relic-parchment"
-                    : "bg-white/5 border-white/10 text-relic-parchment/50 hover:text-relic-parchment",
-                ].join(" ")}
-              >🎲 Random</button>
-            </div>
-            <div className={`flex items-center gap-3 transition-opacity ${randomColor ? "opacity-30 pointer-events-none" : ""}`}>
-              <input type="color" value={color}
-                onChange={(e) => handleColorChange(e.target.value)}
-                className="w-10 h-10 rounded cursor-pointer bg-transparent border-0"
-              />
-              <div className="flex gap-2 flex-wrap">
-                {COLOR_PRESETS.map(({ label, hex }) => (
-                  <button key={hex} onClick={() => handleColorChange(hex)} title={label}
-                    className="w-6 h-6 rounded-full border-2 transition-transform hover:scale-110"
-                    style={{ backgroundColor: hex, borderColor: color === hex && !randomColor ? "#fff" : "transparent" }}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
+          <ColorPicker />
         </>
-      )}
-
-      {topMode === "quest" && (
-        <div>
-          <label className="text-xs uppercase tracking-wider text-relic-parchment/60">Target bearing</label>
-          <input type="range" min={0} max={359} value={target}
-            onChange={(e) => setTarget(Number(e.target.value))}
-            className="w-full mt-2 accent-relic-glow"
-          />
-          <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
-            <span>0°</span>
-            <span className="text-relic-rune font-display text-base">{target}°</span>
-            <span>359°</span>
-          </div>
-          <button disabled={!connected}
-            onClick={() => send({ op: "compass.setTarget", bearing: target })}
-            className="btn-primary mt-3 w-full"
-          >Send target</button>
-        </div>
       )}
 
       {!connected && (
