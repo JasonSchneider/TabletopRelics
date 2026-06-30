@@ -23,11 +23,12 @@ const COLOR_PRESETS = [
 
 interface Props {
   connected: boolean;
+  calibrated?: boolean;
   send: (cmd: RelicCommand) => Promise<void>;
   sendFast: (cmd: RelicCommand) => void;
 }
 
-export function CompassControlPanel({ connected, send, sendFast }: Props) {
+export function CompassControlPanel({ connected, calibrated = false, send, sendFast }: Props) {
   const [topMode, setTopMode]               = useState<TopMode>("compass");
   const [compassSubMode, setCompassSubMode] = useState<CompassSubMode>("real");
   const [ledsOn, setLedsOn]                 = useState(true);
@@ -43,6 +44,8 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
   const [spinSpeed, setSpinSpeed]           = useState(50);
   const [pulseEnabled, setPulseEnabled]     = useState(false);
   const [pulseSpeed, setPulseSpeed]         = useState(50);
+
+  const [calibrationSuccess, setCalibrationSuccess] = useState(false);
 
   const bearingDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevConnected = useRef(false);
@@ -100,7 +103,7 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
     setTopMode(m);
     if (!connected) return;
     if (m === "calibrate") {
-      send({ op: "compass.calibrate" });
+      // Don't send calibrate command yet — user presses the button when ready.
     } else if (m === "compass") {
       if (randomColor) sendFast({ op: "compass.setColor", random: true });
       else { const { r, g, b } = hexToRgb(color); sendFast({ op: "compass.setColor", r, g, b }); }
@@ -214,6 +217,12 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
   function handlePulseSpeedChange(value: number) {
     setPulseSpeed(value);
     if (pulseEnabled) sendFast({ op: "compass.setSpeed", speed: value });
+  }
+
+  async function handleSetNorth() {
+    await send({ op: "compass.calibrate" });
+    setCalibrationSuccess(true);
+    setTimeout(() => setCalibrationSuccess(false), 4000);
   }
 
   // Shared color picker block used in both compass and manual modes.
@@ -494,6 +503,50 @@ export function CompassControlPanel({ connected, send, sendFast }: Props) {
             </div>
           </div>
         </>
+      )}
+
+      {/* ── Calibrate mode ── */}
+      {topMode === "calibrate" && (
+        <div className="space-y-5">
+          {/* Current status */}
+          <div className="flex items-center gap-2">
+            <span className={[
+              "w-2 h-2 rounded-full shrink-0",
+              (calibrated || calibrationSuccess)
+                ? "bg-emerald-400 shadow-[0_0_8px_#34d399]"
+                : "bg-relic-parchment/20",
+            ].join(" ")} />
+            <span className="text-xs text-relic-parchment/60">
+              {(calibrated || calibrationSuccess) ? "North is calibrated" : "Not yet calibrated"}
+            </span>
+          </div>
+
+          {/* Instructions */}
+          <div className="rounded-md border border-white/10 bg-white/5 p-4 space-y-2">
+            <p className="text-sm text-relic-parchment/80 font-medium">How to calibrate</p>
+            <ol className="text-sm text-relic-parchment/60 space-y-1 list-decimal list-inside">
+              <li>Hold the compass flat and level</li>
+              <li>Rotate until the device is pointing North</li>
+              <li>Press <span className="text-relic-parchment/90 font-medium">Set North</span> below</li>
+            </ol>
+          </div>
+
+          {/* Set North button */}
+          {calibrationSuccess ? (
+            <div className="flex items-center gap-2 text-emerald-400 text-sm">
+              <span>✓</span>
+              <span>North saved — calibration complete</span>
+            </div>
+          ) : (
+            <button
+              onClick={handleSetNorth}
+              disabled={!connected}
+              className="w-full btn-primary py-2.5 text-sm disabled:opacity-40"
+            >
+              Set North
+            </button>
+          )}
+        </div>
       )}
 
       {!connected && (
