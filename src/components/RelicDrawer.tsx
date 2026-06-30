@@ -27,6 +27,7 @@ function DeviceControls({ device }: { device: DeviceView }) {
     return (
       <CompassControlPanel
         connected={true}
+        calibrated={device.state?.type === "compass" ? device.state.calibrated : undefined}
         send={device.send}
         sendFast={device.sendFast}
       />

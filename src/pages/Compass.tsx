@@ -45,7 +45,12 @@ export function Compass() {
 
         {/* Controls */}
         <div className="card p-6">
-          <CompassControlPanel connected={status === "connected"} send={send} sendFast={sendFast} />
+          <CompassControlPanel
+            connected={status === "connected"}
+            calibrated={compassState?.calibrated}
+            send={send}
+            sendFast={sendFast}
+          />
         </div>
       </div>
 
