@@ -1,8 +1,9 @@
 import { Link, NavLink } from "react-router-dom";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { ConnectionBadge } from "./ConnectionBadge";
 import { RelicsMenu } from "./RelicsMenu";
 import { UpdateBanner } from "./UpdateBanner";
+import { BUILD_SHA } from "../buildInfo";
 
 interface NavItem {
   to: string;
@@ -55,8 +56,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         {children}
       </main>
 
-      <footer className="mx-auto w-full max-w-5xl px-4 py-6 text-xs text-relic-parchment/40 text-center">
-        Tabletop Relics — control your enchanted props.
+      <footer className="mx-auto w-full max-w-5xl px-4 py-6 text-xs text-relic-parchment/40 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <span>Tabletop Relics — control your enchanted props.</span>
+        <FooterBuildInfo />
       </footer>
       <UpdateBanner />
     </div>
@@ -79,6 +81,54 @@ function NavLinkItem({ item }: { item: NavItem }) {
     >
       {item.label}
     </NavLink>
+  );
+}
+
+interface GHPull {
+  number: number;
+  title: string;
+  merge_commit_sha: string | null;
+}
+
+function FooterBuildInfo() {
+  const [pr, setPr] = useState<GHPull | null>(null);
+
+  useEffect(() => {
+    if (BUILD_SHA === "dev") return;
+    fetch(
+      `https://api.github.com/repos/JasonSchneider/TabletopRelics/pulls?state=closed&sort=updated&direction=desc&per_page=50`
+    )
+      .then((r) => r.json())
+      .then((data: GHPull[]) => {
+        const match = data.find((p) => p.merge_commit_sha === BUILD_SHA);
+        if (match) setPr(match);
+      })
+      .catch(() => {});
+  }, []);
+
+  if (BUILD_SHA === "dev") return null;
+
+  return (
+    <Link
+      to="/changelog"
+      className="flex items-center gap-1.5 hover:text-relic-parchment/70 transition-colors group"
+    >
+      {pr ? (
+        <>
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_4px_#34d399] shrink-0" />
+          <span>
+            PR #{pr.number}
+            <span className="hidden sm:inline">: {pr.title.length > 48 ? pr.title.slice(0, 48) + "…" : pr.title}</span>
+          </span>
+        </>
+      ) : (
+        <>
+          <span className="w-1.5 h-1.5 rounded-full bg-relic-parchment/20 shrink-0" />
+          <span className="font-mono">{BUILD_SHA.slice(0, 7)}</span>
+        </>
+      )}
+      <span className="text-relic-parchment/20 group-hover:text-relic-parchment/40 transition-colors">→</span>
+    </Link>
   );
 }
 

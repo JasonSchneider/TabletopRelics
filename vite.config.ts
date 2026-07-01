@@ -4,6 +4,11 @@ import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  define: {
+    // Injected at build time from Vercel's system env vars.
+    // Falls back to 'dev' locally so footer degrades gracefully.
+    __GIT_SHA__: JSON.stringify(process.env.VERCEL_GIT_COMMIT_SHA ?? "dev"),
+  },
   plugins: [
     react(),
     VitePWA({
