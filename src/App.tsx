@@ -9,6 +9,7 @@ import { Adventure } from "./pages/Adventure";
 import { Store } from "./pages/Store";
 import { ProductPage } from "./pages/Product";
 import { NotFound } from "./pages/NotFound";
+import { Changelog } from "./pages/Changelog";
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
         <Route path="/adventures/:id" element={<Adventure />} />
         <Route path="/store" element={<Store />} />
         <Route path="/store/:productId" element={<ProductPage />} />
+        <Route path="/changelog" element={<Changelog />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </AppShell>
