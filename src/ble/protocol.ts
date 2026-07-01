@@ -59,6 +59,8 @@ export type RelicCommand =
   | { op: "compass.setBrightness"; brightness: number /* 0–100 % */ }
   | { op: "compass.setSpreadIntensity"; intensity: number /* 0–100 % */ }
   | { op: "compass.calibrate" }
+  | { op: "compass.startMagCal" }
+  | { op: "compass.finishMagCal" }
   | { op: "compass.setMode"; mode: "ambient" | "quest" | "manual" | "spin" | "pulse" | "spin-pulse" | "random" | "off" }
 
   // Lantern
@@ -73,7 +75,7 @@ export type RelicCommand =
 
 /** State pushed from the prop via CHAR_STATE_UUID notifications. */
 export type RelicState =
-  | { type: "compass"; mode: "ambient" | "quest" | "manual" | "spin" | "pulse" | "spin-pulse" | "random" | "off"; heading: number; target: number; calibrated: boolean; charging?: boolean }
+  | { type: "compass"; mode: "ambient" | "quest" | "manual" | "spin" | "pulse" | "spin-pulse" | "random" | "calibrate" | "off"; heading: number; target: number; calibrated: boolean; charging?: boolean }
   | { type: "lantern"; intensity: number; color: { r: number; g: number; b: number }; effect: string | null; charging?: boolean }
   | { type: "fairy-stones"; pattern: string; color: { r: number; g: number; b: number }; connectedStones: string[]; charging?: boolean };
 

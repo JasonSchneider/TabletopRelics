@@ -46,6 +46,8 @@ export function CompassControlPanel({ connected, calibrated = false, send, sendF
   const [pulseSpeed, setPulseSpeed]         = useState(50);
 
   const [calibrationSuccess, setCalibrationSuccess] = useState(false);
+  const [magCalActive, setMagCalActive]             = useState(false);
+  const [magCalDone, setMagCalDone]                 = useState(false);
 
   const bearingDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevConnected = useRef(false);
@@ -217,6 +219,19 @@ export function CompassControlPanel({ connected, calibrated = false, send, sendF
   function handlePulseSpeedChange(value: number) {
     setPulseSpeed(value);
     if (pulseEnabled) sendFast({ op: "compass.setSpeed", speed: value });
+  }
+
+  async function handleStartMagCal() {
+    await send({ op: "compass.startMagCal" });
+    setMagCalActive(true);
+    setMagCalDone(false);
+  }
+
+  async function handleFinishMagCal() {
+    await send({ op: "compass.finishMagCal" });
+    setMagCalActive(false);
+    setMagCalDone(true);
+    setTimeout(() => setMagCalDone(false), 4000);
   }
 
   async function handleSetNorth() {
@@ -507,8 +522,9 @@ export function CompassControlPanel({ connected, calibrated = false, send, sendF
 
       {/* ── Calibrate mode ── */}
       {topMode === "calibrate" && (
-        <div className="space-y-5">
-          {/* Current status */}
+        <div className="space-y-6">
+
+          {/* Overall status */}
           <div className="flex items-center gap-2">
             <span className={[
               "w-2 h-2 rounded-full shrink-0",
@@ -517,35 +533,83 @@ export function CompassControlPanel({ connected, calibrated = false, send, sendF
                 : "bg-relic-parchment/20",
             ].join(" ")} />
             <span className="text-xs text-relic-parchment/60">
-              {(calibrated || calibrationSuccess) ? "North is calibrated" : "Not yet calibrated"}
+              {(calibrated || calibrationSuccess) ? "Calibrated" : "Not yet calibrated"}
             </span>
           </div>
 
-          {/* Instructions */}
-          <div className="rounded-md border border-white/10 bg-white/5 p-4 space-y-2">
-            <p className="text-sm text-relic-parchment/80 font-medium">How to calibrate</p>
-            <ol className="text-sm text-relic-parchment/60 space-y-1 list-decimal list-inside">
-              <li>Hold the compass flat and level</li>
-              <li>Rotate until the device is pointing North</li>
-              <li>Press <span className="text-relic-parchment/90 font-medium">Set North</span> below</li>
-            </ol>
+          {/* Step 1: Magnetic calibration */}
+          <div className="space-y-3">
+            <p className="text-xs uppercase tracking-wider text-relic-parchment/60">
+              Step 1 — Magnetic calibration
+            </p>
+            <div className="rounded-md border border-white/10 bg-white/5 p-4 space-y-2">
+              <p className="text-sm text-relic-parchment/80 font-medium">
+                {magCalActive ? "Collecting — keep rotating…" : "Remove magnetic interference"}
+              </p>
+              {magCalActive ? (
+                <p className="text-sm text-relic-parchment/60">
+                  Slowly rotate the device through all orientations — tip it forward,
+                  backward, left, and right while spinning it. Press <strong className="text-relic-parchment/90">Done</strong> when finished.
+                </p>
+              ) : (
+                <p className="text-sm text-relic-parchment/60">
+                  Move away from metal objects and electronics. Press <strong className="text-relic-parchment/90">Start</strong>, then
+                  slowly rotate the device through all orientations for 20–30 seconds.
+                </p>
+              )}
+            </div>
+            {magCalDone ? (
+              <div className="flex items-center gap-2 text-emerald-400 text-sm">
+                <span>✓</span>
+                <span>Magnetic calibration complete</span>
+              </div>
+            ) : magCalActive ? (
+              <button
+                onClick={handleFinishMagCal}
+                disabled={!connected}
+                className="w-full btn-primary py-2.5 text-sm disabled:opacity-40"
+              >
+                Done — save offsets
+              </button>
+            ) : (
+              <button
+                onClick={handleStartMagCal}
+                disabled={!connected}
+                className="w-full btn-primary py-2.5 text-sm disabled:opacity-40"
+              >
+                Start
+              </button>
+            )}
           </div>
 
-          {/* Set North button */}
-          {calibrationSuccess ? (
-            <div className="flex items-center gap-2 text-emerald-400 text-sm">
-              <span>✓</span>
-              <span>North saved — calibration complete</span>
+          {/* Step 2: Set North */}
+          <div className="space-y-3">
+            <p className="text-xs uppercase tracking-wider text-relic-parchment/60">
+              Step 2 — Set North
+            </p>
+            <div className="rounded-md border border-white/10 bg-white/5 p-4 space-y-2">
+              <p className="text-sm text-relic-parchment/80 font-medium">Point the device North</p>
+              <p className="text-sm text-relic-parchment/60">
+                Hold the compass flat and level, rotate until it faces true North,
+                then press <strong className="text-relic-parchment/90">Set North</strong>.
+              </p>
             </div>
-          ) : (
-            <button
-              onClick={handleSetNorth}
-              disabled={!connected}
-              className="w-full btn-primary py-2.5 text-sm disabled:opacity-40"
-            >
-              Set North
-            </button>
-          )}
+            {calibrationSuccess ? (
+              <div className="flex items-center gap-2 text-emerald-400 text-sm">
+                <span>✓</span>
+                <span>North saved</span>
+              </div>
+            ) : (
+              <button
+                onClick={handleSetNorth}
+                disabled={!connected}
+                className="w-full btn-primary py-2.5 text-sm disabled:opacity-40"
+              >
+                Set North
+              </button>
+            )}
+          </div>
+
         </div>
       )}
 
