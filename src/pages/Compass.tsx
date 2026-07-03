@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { useBle } from "../ble/useBle";
 import { RelicAdventures } from "../components/RelicAdventures";
 import { BatteryIcon } from "../components/BatteryIcon";
@@ -32,8 +33,7 @@ export function Compass() {
         <div className="card p-6 flex flex-col items-center gap-4 mx-auto">
           <CompassDial
             heading={compassState?.heading ?? 0}
-            target={0}
-            color={undefined}
+            target={compassState?.target ?? 0}
           />
           <div className="text-center">
             <p className="text-3xl font-display text-relic-rune">
@@ -59,12 +59,29 @@ export function Compass() {
   );
 }
 
-function CompassDial({ heading, target, color }: {
+function CompassDial({ heading, target }: {
   heading: number;
   target: number;
-  color?: string;
 }) {
-  const tickColor = color ?? "#a78bfa";
+  // The needle's amber tip points toward the target bearing on the fixed rose.
+  // Amber starts at the bottom (South = 180°), so we need to rotate by (180 - target)
+  // to bring it to the target position. Formula: rotate = (180 - target + 360) % 360.
+  const rawAngle = ((180 - target) % 360 + 360) % 360;
+
+  // Track an unbounded accumulated angle so CSS transitions always take the
+  // short arc across the 0°/360° boundary rather than spinning the long way.
+  const prevRef = useRef<{ angle: number } | null>(null);
+  let needleAngle: number;
+  if (prevRef.current === null) {
+    needleAngle = rawAngle;
+  } else {
+    let delta = rawAngle - prevRef.current.angle;
+    if (delta > 180) delta -= 360;
+    if (delta < -180) delta += 360;
+    needleAngle = prevRef.current.angle + delta;
+  }
+  prevRef.current = { angle: needleAngle };
+
   return (
     <svg viewBox="0 0 220 220" className="w-56 h-56 sm:w-72 sm:h-72">
       <defs>
@@ -73,7 +90,11 @@ function CompassDial({ heading, target, color }: {
           <stop offset="100%" stopColor="#0a0612" />
         </radialGradient>
       </defs>
+
+      {/* Background */}
       <circle cx="110" cy="110" r="100" fill="url(#dialBg)" stroke="#d4af37" strokeWidth="2" />
+
+      {/* Fixed tick marks */}
       {Array.from({ length: 36 }).map((_, i) => {
         const angle = (i * 10 * Math.PI) / 180;
         const x1 = 110 + Math.sin(angle) * 92;
@@ -84,18 +105,27 @@ function CompassDial({ heading, target, color }: {
           stroke="#d4af37" strokeOpacity={i % 9 === 0 ? 0.9 : 0.3}
           strokeWidth={i % 9 === 0 ? 2 : 1} />;
       })}
+
+      {/* Fixed cardinal labels */}
       {(["N", "E", "S", "W"] as const).map((label, i) => {
         const a = (i * 90 * Math.PI) / 180;
-        return <text key={label} x={110 + Math.sin(a) * 70} y={110 - Math.cos(a) * 70 + 5}
-          textAnchor="middle" className="font-display fill-relic-parchment" fontSize="14">{label}</text>;
+        return <text key={label}
+          x={110 + Math.sin(a) * 70} y={110 - Math.cos(a) * 70 + 5}
+          textAnchor="middle" className="font-display fill-relic-parchment" fontSize="14"
+        >{label}</text>;
       })}
-      <g transform={`rotate(${target} 110 110)`}>
-        <line x1="110" y1="20" x2="110" y2="32" stroke={tickColor} strokeWidth="3" />
+
+      {/* Current heading tick — shows where the device is pointing */}
+      <g transform={`rotate(${heading} 110 110)`}>
+        <line x1="110" y1="20" x2="110" y2="32" stroke="#a78bfa" strokeWidth="3" />
       </g>
-      <g transform={`rotate(${360 - heading} 110 110)`} style={{ transition: "transform 200ms ease-out" }}>
+
+      {/* Needle — amber tip points toward target bearing, short-path animated */}
+      <g transform={`rotate(${needleAngle} 110 110)`} style={{ transition: "transform 200ms ease-out" }}>
         <path d="M110 30 L116 110 L110 116 L104 110 Z" fill="#f4ecd8" />
-        <path d="M110 190 L116 110 L110 104 L104 110 Z" fill="#f59e0b" opacity="0.7" />
+        <path d="M110 190 L116 110 L110 104 L104 110 Z" fill="#f59e0b" opacity="0.9" />
       </g>
+
       <circle cx="110" cy="110" r="5" fill="#d4af37" />
     </svg>
   );
