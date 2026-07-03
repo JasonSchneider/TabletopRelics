@@ -232,6 +232,7 @@ export function CompassControlPanel({ connected, calibrated = false, send, sendF
     setMagCalActive(false);
     setMagCalDone(true);
     setTimeout(() => setMagCalDone(false), 4000);
+    switchTopMode("compass");
   }
 
   async function handleSetNorth() {
