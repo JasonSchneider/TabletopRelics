@@ -92,7 +92,7 @@ function CompassDial({ heading, target, color }: {
       <g transform={`rotate(${target} 110 110)`}>
         <line x1="110" y1="20" x2="110" y2="32" stroke={tickColor} strokeWidth="3" />
       </g>
-      <g transform={`rotate(${heading} 110 110)`} style={{ transition: "transform 200ms ease-out" }}>
+      <g transform={`rotate(${360 - heading} 110 110)`} style={{ transition: "transform 200ms ease-out" }}>
         <path d="M110 30 L116 110 L110 116 L104 110 Z" fill="#f4ecd8" />
         <path d="M110 190 L116 110 L110 104 L104 110 Z" fill="#f59e0b" opacity="0.7" />
       </g>
