@@ -42,7 +42,13 @@ export class BleDevice {
   }
 
   get name(): string {
-    return this.nativeDevice.name ?? "Unknown Relic";
+    if (this.nativeDevice.name) return this.nativeDevice.name;
+    const typeNames: Record<string, string> = {
+      compass: "Magic Compass",
+      lantern: "Magic Lantern",
+      "fairy-stones": "Fairy Stones",
+    };
+    return (this.info?.type && typeNames[this.info.type]) ?? "Unknown Relic";
   }
 
   get id(): string {
