@@ -330,7 +330,7 @@ export function CompassControlPanel({ connected, calibrated = false, send, sendF
           {/* North / Custom toggle */}
           <div className="flex gap-2">
             <button
-              onClick={handleToggleNorthCustom}
+              onClick={() => { if (!pointingNorth) handleToggleNorthCustom(); }}
               className={[
                 "flex-1 py-2 rounded-md text-sm font-medium border transition-colors",
                 pointingNorth
@@ -341,7 +341,7 @@ export function CompassControlPanel({ connected, calibrated = false, send, sendF
               True North
             </button>
             <button
-              onClick={handleToggleNorthCustom}
+              onClick={() => { if (pointingNorth) handleToggleNorthCustom(); }}
               className={[
                 "flex-1 py-2 rounded-md text-sm font-medium border transition-colors",
                 !pointingNorth
