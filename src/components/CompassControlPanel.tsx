@@ -145,7 +145,7 @@ export function CompassControlPanel({ connected, calibrated = false, send, sendF
 
   function handleBearingChange(value: number) {
     setTarget(value);
-    if (pointingNorth) return; // pre-set locally; send on switch to custom
+    if (isCompass && pointingNorth) return; // pre-set locally; send on switch to custom
     if (bearingDebounce.current) clearTimeout(bearingDebounce.current);
     bearingDebounce.current = setTimeout(() => {
       sendFast({ op: "compass.setTarget", bearing: value });
