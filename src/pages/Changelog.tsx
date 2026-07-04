@@ -225,10 +225,20 @@ export function Changelog() {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    fetch("/changelog.json")
+    fetch(
+      "https://api.github.com/repos/JasonSchneider/TabletopRelics/pulls?state=closed&sort=updated&direction=desc&per_page=100"
+    )
       .then((r) => r.json())
       .then((data: GHPull[]) => {
-        setPrs(data);
+        setPrs(
+          data
+            .filter((p) => p.merged_at !== null)
+            .sort(
+              (a, b) =>
+                new Date(b.merged_at!).getTime() -
+                new Date(a.merged_at!).getTime()
+            )
+        );
         setLoading(false);
       })
       .catch(() => {
