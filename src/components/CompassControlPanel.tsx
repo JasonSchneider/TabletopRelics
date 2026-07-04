@@ -70,12 +70,11 @@ export function CompassControlPanel({ connected, calibrated = false, send, sendF
     sendFast({ op: "compass.setSpill", spill: spread });
 
     if (topMode === "compass") {
-      if (pointingNorth) {
-        sendFast({ op: "compass.setMode", mode: "ambient" });
-      } else {
-        sendFast({ op: "compass.setTarget", bearing: target });
-        sendFast({ op: "compass.setMode", mode: "quest" });
-      }
+      sendFast({ op: "compass.setSpinDirection", direction: spinDirection });
+      if (spinEnabled) sendFast({ op: "compass.setSpeed", speed: spinSpeed });
+      else if (pulseEnabled) sendFast({ op: "compass.setSpeed", speed: pulseSpeed });
+      if (!pointingNorth) sendFast({ op: "compass.setTarget", bearing: target });
+      sendFast({ op: "compass.setMode", mode: derivedCompassMode(spinEnabled, pulseEnabled) });
     } else if (topMode === "manual" || topMode === "calibrate") {
       sendFast({ op: "compass.setSpinDirection", direction: spinDirection });
       if (spinEnabled) sendFast({ op: "compass.setSpeed", speed: spinSpeed });
@@ -96,6 +95,13 @@ export function CompassControlPanel({ connected, calibrated = false, send, sendF
     if (spin) return "spin" as const;
     if (pulse) return "pulse" as const;
     return "manual" as const;
+  }
+
+  function derivedCompassMode(spin: boolean, pulse: boolean) {
+    if (spin && pulse) return "spin-pulse" as const;
+    if (spin) return "spin" as const;
+    if (pulse) return "pulse" as const;
+    return pointingNorth ? "ambient" as const : "quest" as const;
   }
 
   function manualFirmwareMode() {
@@ -126,6 +132,9 @@ export function CompassControlPanel({ connected, calibrated = false, send, sendF
     const next = !pointingNorth;
     setPointingNorth(next);
     if (!connected) return;
+    // If spin/pulse is active, keep it running — state update is enough so
+    // the correct mode is restored when spin/pulse is turned off.
+    if (spinEnabled || pulseEnabled) return;
     if (next) {
       send({ op: "compass.setMode", mode: "ambient" });
     } else {
@@ -198,7 +207,9 @@ export function CompassControlPanel({ connected, calibrated = false, send, sendF
     const next = !spinEnabled;
     setSpinEnabled(next);
     if (!connected) return;
-    const mode = derivedManualMode(next, pulseEnabled);
+    const mode = isCompass
+      ? derivedCompassMode(next, pulseEnabled)
+      : derivedManualMode(next, pulseEnabled);
     send({ op: "compass.setMode", mode });
     if (next) {
       send({ op: "compass.setSpinDirection", direction: spinDirection });
@@ -220,7 +231,9 @@ export function CompassControlPanel({ connected, calibrated = false, send, sendF
     const next = !pulseEnabled;
     setPulseEnabled(next);
     if (!connected) return;
-    const mode = derivedManualMode(spinEnabled, next);
+    const mode = isCompass
+      ? derivedCompassMode(spinEnabled, next)
+      : derivedManualMode(spinEnabled, next);
     send({ op: "compass.setMode", mode });
     if (next) send({ op: "compass.setSpeed", speed: pulseSpeed });
   }
@@ -397,6 +410,81 @@ export function CompassControlPanel({ connected, calibrated = false, send, sendF
               <span className="text-relic-rune font-display text-base">{spreadIntensity}%</span>
               <span>Bright</span>
             </div>
+          </div>
+
+          {/* Spin */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs uppercase tracking-wider text-relic-parchment/60">Spin</p>
+              <button onClick={handleSpinToggle}
+                className={[
+                  "text-xs px-3 py-1 rounded border transition-colors",
+                  spinEnabled
+                    ? "bg-relic-rune/30 border-relic-rune/60 text-relic-parchment"
+                    : "bg-white/5 border-white/10 text-relic-parchment/50 hover:text-relic-parchment",
+                ].join(" ")}
+              >{spinEnabled ? "On" : "Off"}</button>
+            </div>
+            {spinEnabled && (
+              <>
+                <div className="flex items-center gap-2 pl-1">
+                  <p className="text-xs text-relic-parchment/50 w-20 shrink-0">Direction</p>
+                  <div className="flex gap-1.5">
+                    {(["cw", "ccw"] as const).map((dir) => (
+                      <button key={dir} onClick={() => handleSpinDirection(dir)}
+                        className={[
+                          "px-2.5 py-1 rounded text-xs uppercase tracking-wide border transition-colors",
+                          spinDirection === dir
+                            ? "bg-relic-rune/40 border-relic-rune/60 text-relic-parchment"
+                            : "bg-white/5 border-white/10 text-relic-parchment/50 hover:text-relic-parchment",
+                        ].join(" ")}
+                      >{dir}</button>
+                    ))}
+                  </div>
+                </div>
+                <div className="pl-1">
+                  <label className="text-xs text-relic-parchment/50">Speed</label>
+                  <input type="range" min={1} max={100} value={spinSpeed}
+                    onChange={(e) => handleSpinSpeedChange(Number(e.target.value))}
+                    className="w-full mt-2 accent-relic-glow"
+                  />
+                  <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
+                    <span>Slow</span>
+                    <span className="text-relic-rune font-display text-base">{spinSpeed}</span>
+                    <span>Fast</span>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Pulse */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs uppercase tracking-wider text-relic-parchment/60">Pulse</p>
+              <button onClick={handlePulseToggle}
+                className={[
+                  "text-xs px-3 py-1 rounded border transition-colors",
+                  pulseEnabled
+                    ? "bg-relic-rune/30 border-relic-rune/60 text-relic-parchment"
+                    : "bg-white/5 border-white/10 text-relic-parchment/50 hover:text-relic-parchment",
+                ].join(" ")}
+              >{pulseEnabled ? "On" : "Off"}</button>
+            </div>
+            {pulseEnabled && (
+              <div className="pl-1">
+                <label className="text-xs text-relic-parchment/50">Speed</label>
+                <input type="range" min={1} max={100} value={pulseSpeed}
+                  onChange={(e) => handlePulseSpeedChange(Number(e.target.value))}
+                  className="w-full mt-2 accent-relic-glow"
+                />
+                <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
+                  <span>Slow</span>
+                  <span className="text-relic-rune font-display text-base">{pulseSpeed}</span>
+                  <span>Fast</span>
+                </div>
+              </div>
+            )}
           </div>
         </>
       )}
