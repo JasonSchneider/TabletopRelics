@@ -25,9 +25,10 @@ interface Props {
   calibrated?: boolean;
   send: (cmd: RelicCommand) => Promise<void>;
   sendFast: (cmd: RelicCommand) => void;
+  onTargetChange?: (bearing: number) => void;
 }
 
-export function CompassControlPanel({ connected, calibrated = false, send, sendFast }: Props) {
+export function CompassControlPanel({ connected, calibrated = false, send, sendFast, onTargetChange }: Props) {
   const [topMode, setTopMode]               = useState<TopMode>("compass");
   const [pointingNorth, setPointingNorth]   = useState(true);
   const [ledsOn, setLedsOn]                 = useState(true);
@@ -145,7 +146,8 @@ export function CompassControlPanel({ connected, calibrated = false, send, sendF
 
   function handleBearingChange(value: number) {
     setTarget(value);
-    if (isCompass && pointingNorth) return; // pre-set locally; send on switch to custom
+    onTargetChange?.(value); // always update dial preview regardless of mode
+    if (isCompass && pointingNorth) return; // don't send to device while pre-setting
     if (bearingDebounce.current) clearTimeout(bearingDebounce.current);
     bearingDebounce.current = setTimeout(() => {
       sendFast({ op: "compass.setTarget", bearing: value });
