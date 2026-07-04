@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useBle } from "../ble/useBle";
 import { RelicAdventures } from "../components/RelicAdventures";
 import { BatteryIcon } from "../components/BatteryIcon";
@@ -9,6 +9,7 @@ export function Compass() {
   const connected = status === "connected";
   const compassState = state?.type === "compass" ? state : null;
   const charging = compassState?.charging ?? false;
+  const [dialTarget, setDialTarget] = useState(0);
 
   return (
     <div className="space-y-6">
@@ -33,7 +34,7 @@ export function Compass() {
         <div className="card p-6 flex flex-col items-center gap-4 mx-auto">
           <CompassDial
             heading={compassState?.heading ?? 0}
-            target={compassState?.target ?? 0}
+            target={dialTarget}
           />
           <div className="text-center">
             <p className="text-3xl font-display text-relic-rune">
@@ -50,6 +51,7 @@ export function Compass() {
             calibrated={compassState?.calibrated}
             send={send}
             sendFast={sendFast}
+            onTargetChange={setDialTarget}
           />
         </div>
       </div>
