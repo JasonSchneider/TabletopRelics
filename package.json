@@ -6,7 +6,7 @@
   "description": "Progressive Web App that controls Arduino-based tabletop props (Magic Compass, Haunted Lantern, Fairy Stones) over Bluetooth Low Energy.",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/generate-changelog.mjs && tsc && vite build",
+    "build": "tsc && vite build",
     "preview": "vite preview --host",
     "lint": "tsc --noEmit"
   },
