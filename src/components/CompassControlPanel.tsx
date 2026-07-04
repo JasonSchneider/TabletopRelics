@@ -425,37 +425,33 @@ export function CompassControlPanel({ connected, calibrated = false, send, sendF
                 ].join(" ")}
               >{spinEnabled ? "On" : "Off"}</button>
             </div>
-            {spinEnabled && (
-              <>
-                <div className="flex items-center gap-2 pl-1">
-                  <p className="text-xs text-relic-parchment/50 w-20 shrink-0">Direction</p>
-                  <div className="flex gap-1.5">
-                    {(["cw", "ccw"] as const).map((dir) => (
-                      <button key={dir} onClick={() => handleSpinDirection(dir)}
-                        className={[
-                          "px-2.5 py-1 rounded text-xs uppercase tracking-wide border transition-colors",
-                          spinDirection === dir
-                            ? "bg-relic-rune/40 border-relic-rune/60 text-relic-parchment"
-                            : "bg-white/5 border-white/10 text-relic-parchment/50 hover:text-relic-parchment",
-                        ].join(" ")}
-                      >{dir}</button>
-                    ))}
-                  </div>
-                </div>
-                <div className="pl-1">
-                  <label className="text-xs text-relic-parchment/50">Speed</label>
-                  <input type="range" min={1} max={100} value={spinSpeed}
-                    onChange={(e) => handleSpinSpeedChange(Number(e.target.value))}
-                    className="w-full mt-2 accent-relic-glow"
-                  />
-                  <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
-                    <span>Slow</span>
-                    <span className="text-relic-rune font-display text-base">{spinSpeed}</span>
-                    <span>Fast</span>
-                  </div>
-                </div>
-              </>
-            )}
+            <div className="flex items-center gap-2 pl-1">
+              <p className="text-xs text-relic-parchment/50 w-20 shrink-0">Direction</p>
+              <div className="flex gap-1.5">
+                {(["cw", "ccw"] as const).map((dir) => (
+                  <button key={dir} onClick={() => handleSpinDirection(dir)}
+                    className={[
+                      "px-2.5 py-1 rounded text-xs uppercase tracking-wide border transition-colors",
+                      spinDirection === dir
+                        ? "bg-relic-rune/40 border-relic-rune/60 text-relic-parchment"
+                        : "bg-white/5 border-white/10 text-relic-parchment/50 hover:text-relic-parchment",
+                    ].join(" ")}
+                  >{dir}</button>
+                ))}
+              </div>
+            </div>
+            <div className="pl-1">
+              <label className="text-xs text-relic-parchment/50">Speed</label>
+              <input type="range" min={1} max={100} value={spinSpeed}
+                onChange={(e) => handleSpinSpeedChange(Number(e.target.value))}
+                className="w-full mt-2 accent-relic-glow"
+              />
+              <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
+                <span>Slow</span>
+                <span className="text-relic-rune font-display text-base">{spinSpeed}</span>
+                <span>Fast</span>
+              </div>
+            </div>
           </div>
 
           {/* Pulse */}
@@ -471,20 +467,18 @@ export function CompassControlPanel({ connected, calibrated = false, send, sendF
                 ].join(" ")}
               >{pulseEnabled ? "On" : "Off"}</button>
             </div>
-            {pulseEnabled && (
-              <div className="pl-1">
-                <label className="text-xs text-relic-parchment/50">Speed</label>
-                <input type="range" min={1} max={100} value={pulseSpeed}
-                  onChange={(e) => handlePulseSpeedChange(Number(e.target.value))}
-                  className="w-full mt-2 accent-relic-glow"
-                />
-                <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
-                  <span>Slow</span>
-                  <span className="text-relic-rune font-display text-base">{pulseSpeed}</span>
-                  <span>Fast</span>
-                </div>
+            <div className="pl-1">
+              <label className="text-xs text-relic-parchment/50">Speed</label>
+              <input type="range" min={1} max={100} value={pulseSpeed}
+                onChange={(e) => handlePulseSpeedChange(Number(e.target.value))}
+                className="w-full mt-2 accent-relic-glow"
+              />
+              <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
+                <span>Slow</span>
+                <span className="text-relic-rune font-display text-base">{pulseSpeed}</span>
+                <span>Fast</span>
               </div>
-            )}
+            </div>
           </div>
         </>
       )}
