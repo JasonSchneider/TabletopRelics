@@ -244,38 +244,35 @@ export function CompassControlPanel({ connected, calibrated = false, send, sendF
     setTimeout(() => setCalibrationSuccess(false), 4000);
   }
 
-  // Shared color picker block used in both compass and manual modes.
-  function ColorPicker() {
-    return (
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-xs uppercase tracking-wider text-relic-parchment/60">Color</label>
-          <button onClick={() => handleRandomColor(!randomColor)}
-            className={[
-              "text-xs px-2 py-0.5 rounded border transition-colors",
-              randomColor
-                ? "bg-relic-rune/30 border-relic-rune/60 text-relic-parchment"
-                : "bg-white/5 border-white/10 text-relic-parchment/50 hover:text-relic-parchment",
-            ].join(" ")}
-          >🎲 Random</button>
-        </div>
-        <div className={`flex items-center gap-3 transition-opacity ${randomColor ? "opacity-30 pointer-events-none" : ""}`}>
-          <input type="color" value={color}
-            onChange={(e) => handleColorChange(e.target.value)}
-            className="w-10 h-10 rounded cursor-pointer bg-transparent border-0"
-          />
-          <div className="flex gap-2 flex-wrap">
-            {COLOR_PRESETS.map(({ label, hex }) => (
-              <button key={hex} onClick={() => handleColorChange(hex)} title={label}
-                className="w-6 h-6 rounded-full border-2 transition-transform hover:scale-110"
-                style={{ backgroundColor: hex, borderColor: color === hex && !randomColor ? "#fff" : "transparent" }}
-              />
-            ))}
-          </div>
+  const colorPicker = (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <label className="text-xs uppercase tracking-wider text-relic-parchment/60">Color</label>
+        <button onClick={() => handleRandomColor(!randomColor)}
+          className={[
+            "text-xs px-2 py-0.5 rounded border transition-colors",
+            randomColor
+              ? "bg-relic-rune/30 border-relic-rune/60 text-relic-parchment"
+              : "bg-white/5 border-white/10 text-relic-parchment/50 hover:text-relic-parchment",
+          ].join(" ")}
+        >🎲 Random</button>
+      </div>
+      <div className={`flex items-center gap-3 transition-opacity ${randomColor ? "opacity-30 pointer-events-none" : ""}`}>
+        <input type="color" value={color}
+          onChange={(e) => handleColorChange(e.target.value)}
+          className="w-10 h-10 rounded cursor-pointer bg-transparent border-0"
+        />
+        <div className="flex gap-2 flex-wrap">
+          {COLOR_PRESETS.map(({ label, hex }) => (
+            <button key={hex} onClick={() => handleColorChange(hex)} title={label}
+              className="w-6 h-6 rounded-full border-2 transition-transform hover:scale-110"
+              style={{ backgroundColor: hex, borderColor: color === hex && !randomColor ? "#fff" : "transparent" }}
+            />
+          ))}
         </div>
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
     <div className="space-y-5">
@@ -327,7 +324,7 @@ export function CompassControlPanel({ connected, calibrated = false, send, sendF
       {/* ── Compass mode ── */}
       {isCompass && (
         <>
-          <ColorPicker />
+          {colorPicker}
 
           {/* North / Custom toggle */}
           <div className="flex gap-2">
@@ -401,7 +398,7 @@ export function CompassControlPanel({ connected, calibrated = false, send, sendF
       {/* ── Manual mode ── */}
       {isManual && (
         <>
-          <ColorPicker />
+          {colorPicker}
 
           {/* Bearing */}
           <div className={allLeds ? "opacity-40 pointer-events-none" : ""}>
