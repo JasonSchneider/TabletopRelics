@@ -34,6 +34,7 @@ export function CompassControlPanel({ connected, calibrated = false, send, sendF
   const [ledsOn, setLedsOn]                 = useState(true);
   const [target, setTarget]                 = useState(0);
   const [color, setColor]                   = useState("#00b4ff");
+  const [customColor, setCustomColor]       = useState("#00b4ff");
   const [brightness, setBrightness]         = useState(78);
   const [spread, setSpread]                 = useState(0);
   const [spreadIntensity, setSpreadIntensity] = useState(50);
@@ -177,6 +178,11 @@ export function CompassControlPanel({ connected, calibrated = false, send, sendF
     sendFast({ op: "compass.setColor", r, g, b });
   }
 
+  function handlePickerChange(hex: string) {
+    setCustomColor(hex);
+    handleColorChange(hex);
+  }
+
   function handleRandomColor(on: boolean) {
     setRandomColor(on);
     if (!connected) return;
@@ -258,8 +264,8 @@ export function CompassControlPanel({ connected, calibrated = false, send, sendF
         >🎲 Random</button>
       </div>
       <div className={`flex items-center gap-3 transition-opacity ${randomColor ? "opacity-30 pointer-events-none" : ""}`}>
-        <input type="color" value={color}
-          onChange={(e) => handleColorChange(e.target.value)}
+        <input type="color" value={customColor}
+          onChange={(e) => handlePickerChange(e.target.value)}
           className="w-10 h-10 rounded cursor-pointer bg-transparent border-0"
         />
         <div className="flex gap-2 flex-wrap">
