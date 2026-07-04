@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import type { RelicCommand } from "../ble/protocol";
 
 type TopMode = "compass" | "manual" | "calibrate";
-type CompassSubMode = "real" | "custom";
 
 function hexToRgb(hex: string) {
   return {
@@ -30,7 +29,7 @@ interface Props {
 
 export function CompassControlPanel({ connected, calibrated = false, send, sendFast }: Props) {
   const [topMode, setTopMode]               = useState<TopMode>("compass");
-  const [compassSubMode, setCompassSubMode] = useState<CompassSubMode>("real");
+  const [pointingNorth, setPointingNorth]   = useState(true);
   const [ledsOn, setLedsOn]                 = useState(true);
   const [target, setTarget]                 = useState(0);
   const [color, setColor]                   = useState("#00b4ff");
@@ -69,7 +68,7 @@ export function CompassControlPanel({ connected, calibrated = false, send, sendF
     sendFast({ op: "compass.setSpill", spill: spread });
 
     if (topMode === "compass") {
-      if (compassSubMode === "real") {
+      if (pointingNorth) {
         sendFast({ op: "compass.setMode", mode: "ambient" });
       } else {
         sendFast({ op: "compass.setTarget", bearing: target });
@@ -110,7 +109,7 @@ export function CompassControlPanel({ connected, calibrated = false, send, sendF
       if (randomColor) sendFast({ op: "compass.setColor", random: true });
       else { const { r, g, b } = hexToRgb(color); sendFast({ op: "compass.setColor", r, g, b }); }
       sendFast({ op: "compass.setSpill", spill: spread });
-      if (compassSubMode === "real") {
+      if (pointingNorth) {
         send({ op: "compass.setMode", mode: "ambient" });
       } else {
         sendFast({ op: "compass.setTarget", bearing: target });
@@ -121,10 +120,11 @@ export function CompassControlPanel({ connected, calibrated = false, send, sendF
     }
   }
 
-  function handleCompassSubMode(sub: CompassSubMode) {
-    setCompassSubMode(sub);
+  function handleToggleNorthCustom() {
+    const next = !pointingNorth;
+    setPointingNorth(next);
     if (!connected) return;
-    if (sub === "real") {
+    if (next) {
       send({ op: "compass.setMode", mode: "ambient" });
     } else {
       sendFast({ op: "compass.setTarget", bearing: target });
@@ -145,6 +145,7 @@ export function CompassControlPanel({ connected, calibrated = false, send, sendF
 
   function handleBearingChange(value: number) {
     setTarget(value);
+    if (pointingNorth) return; // pre-set locally; send on switch to custom
     if (bearingDebounce.current) clearTimeout(bearingDebounce.current);
     bearingDebounce.current = setTimeout(() => {
       sendFast({ op: "compass.setTarget", bearing: value });
@@ -326,37 +327,45 @@ export function CompassControlPanel({ connected, calibrated = false, send, sendF
         <>
           <ColorPicker />
 
-          {/* Real north / Custom bearing */}
+          {/* Target bearing — always visible; pre-sets target while in North mode */}
           <div>
-            <p className="text-xs uppercase tracking-wider text-relic-parchment/60 mb-2">Direction</p>
-            <div className="flex gap-2">
-              {(["real", "custom"] as CompassSubMode[]).map((sub) => (
-                <button key={sub} onClick={() => handleCompassSubMode(sub)}
-                  className={[
-                    "px-3 py-1.5 rounded-md text-sm transition-colors",
-                    compassSubMode === sub
-                      ? "bg-relic-glow/30 text-relic-parchment border border-relic-glow/50"
-                      : "bg-white/5 text-relic-parchment/60 hover:text-relic-parchment hover:bg-white/10 border border-white/10",
-                  ].join(" ")}
-                >{sub === "real" ? "Real north" : "Custom"}</button>
-              ))}
+            <label className="text-xs uppercase tracking-wider text-relic-parchment/60">Target Bearing</label>
+            <input type="range" min={0} max={359} value={target}
+              onChange={(e) => handleBearingChange(Number(e.target.value))}
+              className="w-full mt-2 accent-relic-glow"
+            />
+            <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
+              <span>0°</span>
+              <span className="text-relic-rune font-display text-base">{target}°</span>
+              <span>359°</span>
             </div>
           </div>
 
-          {compassSubMode === "custom" && (
-            <div>
-              <label className="text-xs uppercase tracking-wider text-relic-parchment/60">Bearing</label>
-              <input type="range" min={0} max={359} value={target}
-                onChange={(e) => handleBearingChange(Number(e.target.value))}
-                className="w-full mt-2 accent-relic-glow"
-              />
-              <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
-                <span>0°</span>
-                <span className="text-relic-rune font-display text-base">{target}°</span>
-                <span>359°</span>
-              </div>
-            </div>
-          )}
+          {/* North / Custom toggle */}
+          <div className="flex gap-2">
+            <button
+              onClick={handleToggleNorthCustom}
+              className={[
+                "flex-1 py-2 rounded-md text-sm font-medium border transition-colors",
+                pointingNorth
+                  ? "bg-relic-glow/30 text-relic-parchment border-relic-glow/50"
+                  : "bg-white/5 text-relic-parchment/60 hover:text-relic-parchment hover:bg-white/10 border-white/10",
+              ].join(" ")}
+            >
+              True North
+            </button>
+            <button
+              onClick={handleToggleNorthCustom}
+              className={[
+                "flex-1 py-2 rounded-md text-sm font-medium border transition-colors",
+                !pointingNorth
+                  ? "bg-relic-glow/30 text-relic-parchment border-relic-glow/50"
+                  : "bg-white/5 text-relic-parchment/60 hover:text-relic-parchment hover:bg-white/10 border-white/10",
+              ].join(" ")}
+            >
+              {target}° Custom
+            </button>
+          </div>
 
           {/* Spread */}
           <div>
@@ -384,7 +393,6 @@ export function CompassControlPanel({ connected, calibrated = false, send, sendF
               <span>Bright</span>
             </div>
           </div>
-
         </>
       )}
 
