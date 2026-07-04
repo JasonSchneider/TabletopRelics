@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { BUILD_SHA } from "../buildInfo";
 
-const REPO = "JasonSchneider/TabletopRelics";
-
 interface GHPull {
   number: number;
   title: string;
@@ -96,7 +94,7 @@ function PrCard({
       setLoadingComments(true);
       try {
         const r = await fetch(
-          `https://api.github.com/repos/${REPO}/issues/${pr.number}/comments`
+          `https://api.github.com/repos/JasonSchneider/TabletopRelics/issues/${pr.number}/comments`
         );
         setComments(await r.json());
       } catch {
@@ -227,18 +225,10 @@ export function Changelog() {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    fetch(
-      `https://api.github.com/repos/${REPO}/pulls?state=closed&sort=updated&direction=desc&per_page=50`
-    )
+    fetch("/changelog.json")
       .then((r) => r.json())
       .then((data: GHPull[]) => {
-        const merged = data
-          .filter((p) => p.merged_at !== null)
-          .sort(
-            (a, b) =>
-              new Date(b.merged_at!).getTime() - new Date(a.merged_at!).getTime()
-          );
-        setPrs(merged);
+        setPrs(data);
         setLoading(false);
       })
       .catch(() => {
