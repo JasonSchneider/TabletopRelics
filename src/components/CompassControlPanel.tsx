@@ -327,20 +327,6 @@ export function CompassControlPanel({ connected, calibrated = false, send, sendF
         <>
           <ColorPicker />
 
-          {/* Target bearing — always visible; pre-sets target while in North mode */}
-          <div>
-            <label className="text-xs uppercase tracking-wider text-relic-parchment/60">Target Bearing</label>
-            <input type="range" min={0} max={359} value={target}
-              onChange={(e) => handleBearingChange(Number(e.target.value))}
-              className="w-full mt-2 accent-relic-glow"
-            />
-            <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
-              <span>0°</span>
-              <span className="text-relic-rune font-display text-base">{target}°</span>
-              <span>359°</span>
-            </div>
-          </div>
-
           {/* North / Custom toggle */}
           <div className="flex gap-2">
             <button
@@ -365,6 +351,20 @@ export function CompassControlPanel({ connected, calibrated = false, send, sendF
             >
               {target}° Custom
             </button>
+          </div>
+
+          {/* Target bearing — pre-sets target while in North mode, active in Custom */}
+          <div>
+            <label className="text-xs uppercase tracking-wider text-relic-parchment/60">Target Bearing</label>
+            <input type="range" min={0} max={359} value={target}
+              onChange={(e) => handleBearingChange(Number(e.target.value))}
+              className="w-full mt-2 accent-relic-glow"
+            />
+            <div className="flex justify-between text-xs text-relic-parchment/50 mt-1">
+              <span>0°</span>
+              <span className="text-relic-rune font-display text-base">{target}°</span>
+              <span>359°</span>
+            </div>
           </div>
 
           {/* Spread */}
